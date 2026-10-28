@@ -58,7 +58,7 @@ platforms:
         - "You're doing it wrong"
 
   instagram:
-    enabled: true
+    enabled: false
     name: "Instagram"
     target_posts_per_week: 1
     min_spacing_hours: 48

@@ -70,8 +70,65 @@ class MockProvider(BaseAIProvider):
     def generate_text(self, prompt: str, system_instruction: Optional[str] = None) -> str:
         prompt_lower = prompt.lower()
 
-        # Differentiate output by platform requested in prompt
-        if "platform: linkedin" in prompt_lower or "for linkedin" in prompt_lower:
+        # Topic-aware content synthesis
+        if "idempotent" in prompt_lower or "webhook" in prompt_lower:
+            if "platform: linkedin" in prompt_lower:
+                return (
+                    "In distributed systems, networks guarantee at-least-once delivery, not exactly-once.\n\n"
+                    "If your webhook receiver assumes every payload arrives once, duplicate processing is guaranteed. "
+                    "Upstream network retries from Stripe, GitHub, or Shopify will regularly send identical payloads within milliseconds.\n\n"
+                    "Many teams reach for distributed Redis locks, but a cleaner, zero-dependency pattern is storage-level deduplication:\n\n"
+                    "1. Maintain an idempotency table recording `(provider, event_id, created_at)`.\n"
+                    "2. Add a database-level unique constraint on `(provider, event_id)`.\n"
+                    "3. Insert atomically before processing business logic.\n\n"
+                    "Concurrent duplicate deliveries will fail fast at the storage boundary with a unique constraint violation, "
+                    "completely eliminating side-effects without distributed locks.\n\n"
+                    "#DistributedSystems #BackendEngineering #SoftwareArchitecture"
+                )
+            elif "platform: x" in prompt_lower:
+                return (
+                    "Networks guarantee at-least-once delivery, not exactly-once.\n\n"
+                    "Don't build complex distributed locks to prevent duplicate webhooks. A database unique constraint on (provider, event_id) fails duplicates fast at the storage boundary."
+                )
+
+        elif "sqlite" in prompt_lower or "wal" in prompt_lower:
+            if "platform: linkedin" in prompt_lower:
+                return (
+                    "SQLite handles concurrent workloads far better than most developers realize.\n\n"
+                    "The common complaint 'database table is locked' is almost always caused by running in default journal mode. "
+                    "With three simple configuration pragmas, SQLite becomes exceptionally resilient for internal tools and edge workloads:\n\n"
+                    "1. `PRAGMA journal_mode = WAL;` (Write-Ahead Logging: readers never block writers, writers never block readers)\n"
+                    "2. `PRAGMA busy_timeout = 5000;` (Wait up to 5 seconds for write locks rather than failing immediately)\n"
+                    "3. `PRAGMA synchronous = NORMAL;` (Reduces disk sync calls with virtually zero durability loss)\n\n"
+                    "For moderate write workloads and high read throughput, embedded SQLite eliminates multi-thousand dollar cloud database bills while delivering sub-millisecond latencies.\n\n"
+                    "#SQLite #DatabaseDesign #Python #PerformanceOptimization"
+                )
+            elif "platform: x" in prompt_lower:
+                return (
+                    "Most developers don't need a $200/mo cloud Postgres instance for internal tools.\n\n"
+                    "SQLite in WAL mode (`PRAGMA journal_mode = WAL;`) allows concurrent readers while a writer commits. Sub-millisecond queries on a single file."
+                )
+
+        elif "jitter" in prompt_lower or "backoff" in prompt_lower:
+            if "platform: linkedin" in prompt_lower:
+                return (
+                    "Why unjittered exponential backoff crashes recovering systems:\n\n"
+                    "When an API experiences a temporary outage, hundreds of failed clients back off at the exact same intervals (1s, 2s, 4s, 8s). "
+                    "The moment the service begins to recover, every client retries at the exact same millisecond. This creates a 'thundering herd' spike that immediately knocks the API back down.\n\n"
+                    "The fix is 'Full Jitter':\n"
+                    "Instead of sleeping for `base * 2^attempt`, sleep for `random(0, min(max_delay, base * 2^attempt))`.\n\n"
+                    "Spreading the retry wave uniformly across time allows recovering backends to drain queues without recurring contention spikes.\n\n"
+                    "#DistributedSystems #ReliabilityEngineering #CloudArchitecture"
+                )
+            elif "platform: x" in prompt_lower:
+                return (
+                    "Unjittered exponential backoff is a trap.\n\n"
+                    "If 1,000 clients fail simultaneously, they will all retry at the exact same second and knock the recovering service back down.\n\n"
+                    "Always add Full Jitter: randomize sleep between 0 and your backoff delay."
+                )
+
+        # Default Cron topic
+        if "platform: linkedin" in prompt_lower:
             return (
                 "Cron jobs are schedulers, not orchestrators. Here is why un-gated cron jobs fail in production:\n\n"
                 "When a high-frequency background worker experiences a traffic spike or slow external API response, "
@@ -85,34 +142,12 @@ class MockProvider(BaseAIProvider):
                 "SQLite solves 95% of concurrency failure modes.\n\n"
                 "#SoftwareEngineering #DistributedSystems #BackendArchitecture"
             )
-
-        elif "platform: x" in prompt_lower or "for x" in prompt_lower:
+        else:
             return (
                 "Cron is a scheduler, not an orchestrator.\n\n"
                 "If your batch task takes longer than the interval, cron will spawn a duplicate worker and corrupt your data.\n\n"
                 "Use an atomic state machine with advisory locking instead. Simple, local, and resilient."
             )
-
-        elif "platform: instagram" in prompt_lower or "for instagram" in prompt_lower:
-            return (
-                "Why Cron Jobs Break Under High Load (And What To Build Instead):\n\n"
-                "Swipe through the visual blueprint to see the exact state transition diagram:\n"
-                "Slide 1: The Cron Overlap Trap (Concurrent worker collision)\n"
-                "Slide 2: Atomic State Machine (QUEUED -> PROCESSING -> COMPLETED)\n"
-                "Slide 3: Heartbeat Timeout & Recovery\n\n"
-                "Building resilient background jobs doesn't require Kubernetes. A hardened SQLite database with WAL mode provides sub-millisecond local locks.\n\n"
-                "#SystemDesign #BackendEngineering #DevOps #Architecture"
-            )
-
-        # General revision fallback
-        return (
-            "Engineering Architecture Lesson: Idempotent Consumer Design\n\n"
-            "In distributed systems, networks guarantee at-least-once delivery, not exactly-once. "
-            "Every consumer must maintain an idempotency table recording `(provider, event_id)` "
-            "with a unique database constraint. Concurrent duplicate webhooks fail fast at the storage "
-            "boundary before triggering side-effects.\n\n"
-            "#SystemDesign #CloudArchitecture"
-        )
 
 
 def get_ai_provider() -> BaseAIProvider:
