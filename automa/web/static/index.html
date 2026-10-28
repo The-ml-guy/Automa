@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Automa — Autonomous Social Media Publishing System</title>
+  <meta name="description" content="Localhost control dashboard and queue observer for Automa autonomous social media engine.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body class="dark-theme">
+  <!-- Top Navigation Header -->
+  <header class="app-header" id="app-header">
+    <div class="header-container">
+      <div class="brand-group">
+        <div class="brand-badge-icon" aria-hidden="true">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+          </svg>
+        </div>
+        <div class="brand-meta">
+          <h1 class="brand-title">AUTOMA</h1>
+          <span class="brand-tagline">Autonomous Publishing Engine</span>
+        </div>
+      </div>
+
+      <div class="header-actions">
+        <div class="status-pill active" id="system-health-pill">
+          <span class="pulse-dot"></span>
+          <span id="health-text">Local Engine: Active</span>
+        </div>
+        <div class="mode-pill" id="mode-pill">
+          <span class="mode-label" id="mode-text">DRY RUN</span>
+        </div>
+        <button class="btn btn-secondary" id="btn-refresh-data" title="Refresh dashboard data">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="23 4 23 10 17 10"></polyline>
+            <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
+          </svg>
+          Sync
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="dashboard-layout" id="dashboard-main">
+    
+    <!-- Hero / Status Banner -->
+    <section class="metrics-grid" id="metrics-grid">
+      <div class="metric-card glass-panel" id="card-scheduled">
+        <div class="metric-header">
+          <span class="metric-label">Scheduled Queue</span>
+          <span class="metric-icon blue">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+          </span>
+        </div>
+        <div class="metric-value" id="val-scheduled">0</div>
+        <span class="metric-subtext">Waiting for dispatch window</span>
+      </div>
+
+      <div class="metric-card glass-panel" id="card-published">
+        <div class="metric-header">
+          <span class="metric-label">Published</span>
+          <span class="metric-icon green">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>
+          </span>
+        </div>
+        <div class="metric-value" id="val-published">0</div>
+        <span class="metric-subtext">Confirmed on network</span>
+      </div>
+
+      <div class="metric-card glass-panel" id="card-review">
+        <div class="metric-header">
+          <span class="metric-label">Requires Review</span>
+          <span class="metric-icon amber">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+          </span>
+        </div>
+        <div class="metric-value" id="val-review">0</div>
+        <span class="metric-subtext">Safety policy hold</span>
+      </div>
+
+      <div class="metric-card glass-panel" id="card-rejected">
+        <div class="metric-header">
+          <span class="metric-label">Rejected by Gate</span>
+          <span class="metric-icon purple">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>
+          </span>
+        </div>
+        <div class="metric-value" id="val-rejected">0</div>
+        <span class="metric-subtext">Quality score below 85</span>
+      </div>
+    </section>
+
+    <!-- Control Station -->
+    <section class="controls-panel glass-panel" id="controls-panel">
+      <div class="controls-left">
+        <h2 class="section-title">Automation Control Deck</h2>
+        <p class="section-desc">Trigger autonomous generation or force a publishing cycle of ready posts.</p>
+      </div>
+      <div class="controls-actions">
+        <button class="btn btn-primary" id="btn-trigger-generate">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
+          Generate New Posts
+        </button>
+        <button class="btn btn-success" id="btn-trigger-publish">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+          Publish Due Queue
+        </button>
+      </div>
+    </section>
+
+    <!-- Manual Review Alert Banner (Visible if any items require review) -->
+    <section class="review-alert-section glass-panel hidden" id="review-alert-section">
+      <div class="review-alert-header">
+        <div class="alert-title-wrap">
+          <span class="badge-alert">MANUAL REVIEW REQUIRED</span>
+          <h3 class="alert-headline" id="review-count-headline">0 drafts flagged by autonomous safety policy</h3>
+        </div>
+        <p class="alert-subtext">The following drafts were withheld from autonomous publishing due to policy constraints.</p>
+      </div>
+      <div class="review-items-container" id="review-items-container">
+        <!-- Rendered dynamically -->
+      </div>
+    </section>
+
+    <!-- Main Content Area: Tabs & Posts Explorer -->
+    <section class="content-explorer glass-panel" id="content-explorer">
+      <div class="explorer-header">
+        <div class="tabs-group" id="filter-tabs">
+          <button class="tab-btn active" data-filter="all" id="tab-all">All Posts</button>
+          <button class="tab-btn" data-filter="SCHEDULED" id="tab-scheduled">Scheduled</button>
+          <button class="tab-btn" data-filter="PUBLISHED" id="tab-published">Published</button>
+          <button class="tab-btn" data-filter="REJECTED" id="tab-rejected">Rejected</button>
+          <button class="tab-btn" data-filter="MANUAL_REVIEW_REQUIRED" id="tab-review">Needs Review</button>
+        </div>
+
+        <div class="platform-filter-group">
+          <select id="select-platform-filter" class="form-select">
+            <option value="">All Networks</option>
+            <option value="linkedin">LinkedIn</option>
+            <option value="x">X (Twitter)</option>
+            <option value="instagram">Instagram</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Posts List Table / Cards -->
+      <div class="posts-table-wrap">
+        <table class="posts-table" id="posts-table">
+          <thead>
+            <tr>
+              <th>Platform</th>
+              <th>Topic & Content Preview</th>
+              <th>Score</th>
+              <th>Status</th>
+              <th>Scheduled (UTC)</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="posts-table-body">
+            <!-- Dynamically populated -->
+            <tr>
+              <td colspan="6" class="empty-state">Loading posts from SQLite storage...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Audit Trace & Health -->
+    <section class="audit-section glass-panel" id="audit-section">
+      <div class="audit-header">
+        <h3 class="section-title">System Audit Log & State Transitions</h3>
+        <span class="audit-badge" id="audit-count-badge">Recent 10 Events</span>
+      </div>
+      <div class="audit-log-list" id="audit-log-list">
+        <!-- Dynamically populated -->
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Post Detail Modal -->
+  <dialog class="modal-dialog" id="post-detail-modal">
+    <div class="modal-content glass-panel" id="modal-content-wrap">
+      <div class="modal-header">
+        <div class="modal-title-meta">
+          <span class="badge" id="modal-platform-badge">LinkedIn</span>
+          <h2 class="modal-title" id="modal-post-topic">Post Topic</h2>
+        </div>
+        <button class="btn-icon" id="btn-close-modal" aria-label="Close dialog">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+      </div>
+      
+      <div class="modal-body">
+        <div class="modal-grid">
+          <!-- Left: Post Content -->
+          <div class="modal-col-main">
+            <label class="field-label">Post Copy</label>
+            <div class="post-preview-box" id="modal-post-content"></div>
+
+            <div class="media-box-wrap hidden" id="modal-media-box">
+              <label class="field-label">Visual Asset / Concept</label>
+              <div class="media-spec-box" id="modal-media-spec"></div>
+            </div>
+          </div>
+
+          <!-- Right: Quality Gate Breakdown -->
+          <div class="modal-col-sidebar">
+            <div class="gate-score-card">
+              <span class="gate-score-label">Deterministic Quality Score</span>
+              <div class="gate-score-number" id="modal-score-number">95</div>
+              <span class="gate-verdict" id="modal-verdict-text">PASSED (Threshold: 85)</span>
+            </div>
+
+            <div class="report-section">
+              <label class="field-label">Gate Verification Report</label>
+              <div class="report-box" id="modal-report-box"></div>
+            </div>
+
+            <div class="metadata-section">
+              <label class="field-label">Idempotency & Fingerprint</label>
+              <div class="mono-code" id="modal-fingerprint">SHA-256</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer" id="modal-footer-actions">
+        <button class="btn btn-secondary" id="btn-modal-dismiss">Close</button>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- Toast Notification Container -->
+  <div class="toast-container" id="toast-container"></div>
+
+  <script src="/app.js"></script>
+</body>
+</html>

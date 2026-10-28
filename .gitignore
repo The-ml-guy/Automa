@@ -1,0 +1,28 @@
+# Python virtual environment & cache
+.venv/
+__pycache__/
+*.py[cod]
+*$py.class
+*.pytest_cache/
+
+# Local databases & storage
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+data/*.db
+
+# Credentials & environment
+.env
+.env.local
+tokens.json
+secrets.json
+
+# Local logs & runs
+logs/*.log
+logs/*.jsonl
+
+# Published content artifacts & archives
+content/published/*.json
+content/published/*.png
+content/published/*.jpg

@@ -1,0 +1,37 @@
+{
+  "id": "post_x_e849ad32",
+  "platform": "x",
+  "status": "REJECTED",
+  "topic": "High-Performance SQLite WAL Concurrency",
+  "content": "Cron is a scheduler, not an orchestrator.\n\nIf your batch task takes longer than the interval, cron will spawn a duplicate worker and corrupt your data.\n\nUse an atomic state machine with advisory locking instead. Simple, local, and resilient.",
+  "thread_items": [],
+  "media_urls": [],
+  "media_prompt": null,
+  "quality_score": 45,
+  "quality_report": {
+    "score": 45,
+    "passed": false,
+    "hard_failures": [
+      "Exact content duplicate detected. Identical post was already scheduled or published.",
+      "High content similarity (100.0%) detected with recent post. Rejecting repetitive concept."
+    ],
+    "warnings": [],
+    "emoji_count": 0,
+    "hashtag_count": 0,
+    "similarity": 1.0
+  },
+  "revision_count": 2,
+  "fingerprint": "5f151ab697577871ae7d28c4aa2a8d97a0d465108107fbb0ed4c9aee79c88f2e",
+  "idempotency_key": "idemp_post_x_e849ad32_5f151ab69757",
+  "scheduled_at": null,
+  "published_at": null,
+  "external_post_id": null,
+  "retry_count": 0,
+  "max_retries": 3,
+  "next_retry_at": null,
+  "last_error": null,
+  "requires_manual_review": false,
+  "manual_review_reason": null,
+  "created_at": "2026-10-28T19:30:34.434219+00:00",
+  "updated_at": "2026-10-28T19:30:34.434219+00:00"
+}

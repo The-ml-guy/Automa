@@ -1,0 +1,39 @@
+{
+  "id": "post_instagram_3b70c83a",
+  "platform": "instagram",
+  "status": "REJECTED",
+  "topic": "High-Performance SQLite WAL Concurrency",
+  "content": "Why Cron Jobs Break Under High Load (And What To Build Instead):\n\nSwipe through the visual blueprint to see the exact state transition diagram:\nSlide 1: The Cron Overlap Trap (Concurrent worker collision)\nSlide 2: Atomic State Machine (QUEUED -> PROCESSING -> COMPLETED)\nSlide 3: Heartbeat Timeout & Recovery\n\nBuilding resilient background jobs doesn't require Kubernetes. A hardened SQLite database with WAL mode provides sub-millisecond local locks.\n\n#SystemDesign #BackendEngineering #DevOps #Architecture",
+  "thread_items": [],
+  "media_urls": [
+    "F:\\automa\\content\\queue\\post_instagram_3b70c83a_graphic.png"
+  ],
+  "media_prompt": "System Architecture Flowchart: High-Performance SQLite WAL Concurrency. Clean dark-mode diagram with high contrast text.",
+  "quality_score": 45,
+  "quality_report": {
+    "score": 45,
+    "passed": false,
+    "hard_failures": [
+      "Exact content duplicate detected. Identical post was already scheduled or published.",
+      "High content similarity (100.0%) detected with recent post. Rejecting repetitive concept."
+    ],
+    "warnings": [],
+    "emoji_count": 0,
+    "hashtag_count": 4,
+    "similarity": 1.0
+  },
+  "revision_count": 2,
+  "fingerprint": "23aa1cfa80a07708621a1c668107b2c2061d7d935f9221a8cfd24fbdfa7a2523",
+  "idempotency_key": "idemp_post_instagram_3b70c83a_23aa1cfa80a0",
+  "scheduled_at": null,
+  "published_at": null,
+  "external_post_id": null,
+  "retry_count": 0,
+  "max_retries": 3,
+  "next_retry_at": null,
+  "last_error": null,
+  "requires_manual_review": false,
+  "manual_review_reason": null,
+  "created_at": "2026-10-28T19:30:34.471654+00:00",
+  "updated_at": "2026-10-28T19:30:34.471654+00:00"
+}

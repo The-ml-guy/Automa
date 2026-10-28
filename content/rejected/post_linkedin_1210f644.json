@@ -1,0 +1,37 @@
+{
+  "id": "post_linkedin_1210f644",
+  "platform": "linkedin",
+  "status": "REJECTED",
+  "topic": "High-Performance SQLite WAL Concurrency",
+  "content": "Cron jobs are schedulers, not orchestrators. Here is why un-gated cron jobs fail in production:\n\nWhen a high-frequency background worker experiences a traffic spike or slow external API response, the task often exceeds its execution window. A standard cron runner will blindly spawn a second instance at the next tick. The result? Concurrent database writes, row lock contention, and duplicate processing.\n\nA resilient alternative requires three deterministic guardrails:\n1. An advisory file or database lock so overlapping executions exit immediately.\n2. An atomic state machine (`QUEUED` -> `PROCESSING` -> `COMPLETED` / `FAILED`) in SQLite or Postgres.\n3. A heartbeat timestamp to cleanly recover orphaned jobs after unexpected worker restarts.\n\nBefore reaching for complex distributed orchestration frameworks, a 50-line state machine with WAL-mode SQLite solves 95% of concurrency failure modes.\n\n#SoftwareEngineering #DistributedSystems #BackendArchitecture",
+  "thread_items": [],
+  "media_urls": [],
+  "media_prompt": null,
+  "quality_score": 45,
+  "quality_report": {
+    "score": 45,
+    "passed": false,
+    "hard_failures": [
+      "Exact content duplicate detected. Identical post was already scheduled or published.",
+      "High content similarity (100.0%) detected with recent post. Rejecting repetitive concept."
+    ],
+    "warnings": [],
+    "emoji_count": 0,
+    "hashtag_count": 3,
+    "similarity": 1.0
+  },
+  "revision_count": 2,
+  "fingerprint": "f46d79da552a1f7272733ad962d35eb5e8bec1471a66190ebf523cb0ea4a6019",
+  "idempotency_key": "idemp_post_linkedin_1210f644_f46d79da552a",
+  "scheduled_at": null,
+  "published_at": null,
+  "external_post_id": null,
+  "retry_count": 0,
+  "max_retries": 3,
+  "next_retry_at": null,
+  "last_error": null,
+  "requires_manual_review": false,
+  "manual_review_reason": null,
+  "created_at": "2026-10-28T19:30:34.353144+00:00",
+  "updated_at": "2026-10-28T19:30:34.353144+00:00"
+}

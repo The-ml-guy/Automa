@@ -1,0 +1,79 @@
+# ==============================================================================
+# PLATFORM PUBLISHING CONFIGURATION & EDITORIAL CONSTRAINTS
+# ==============================================================================
+
+global:
+  timezone: "UTC"
+  conservative_weekly_cap: 5 # Total posts across all networks combined per week
+  min_inter_platform_spacing_hours: 4 # Min spacing between posts on different platforms
+  max_auto_revisions: 2
+  min_passing_score: 85 # Deterministic quality score threshold (0-100)
+
+platforms:
+  linkedin:
+    enabled: true
+    name: "LinkedIn"
+    target_posts_per_week: 2
+    min_spacing_hours: 24
+    preferred_days: ["Tuesday", "Thursday"]
+    preferred_times_utc: ["13:30", "17:00"] # 8:30 AM / 12:00 PM EST equivalent
+    constraints:
+      max_characters: 3000
+      min_characters: 400
+      optimal_character_range: [800, 1800]
+      max_hashtags: 3
+      max_emojis: 2
+      allow_external_links: true
+      require_media: false
+    style_guidelines:
+      structure: "Lead with a counter-intuitive observation or concrete engineering lesson. Develop the technical nuance with clear paragraphs. Close with an invitation for technical critique."
+      prohibited_phrases:
+        - "Agree?"
+        - "Thoughts?"
+        - "Let that sink in"
+        - "I am thrilled to announce"
+        - "Humbled and honored"
+        - "Swipe to see"
+
+  x:
+    enabled: true
+    name: "X (Twitter)"
+    target_posts_per_week: 3
+    min_spacing_hours: 18
+    preferred_days: ["Monday", "Wednesday", "Friday"]
+    preferred_times_utc: ["14:15", "19:30"]
+    constraints:
+      max_characters_per_tweet: 280
+      allow_threads: true
+      max_thread_tweets: 5
+      max_hashtags: 2
+      max_emojis: 1
+      require_media: false
+    style_guidelines:
+      structure: "One defensible thesis per post. Sharp, clear technical observation. If thread, every tweet must stand on its own as a valuable insight."
+      prohibited_phrases:
+        - "A mega-thread 🧵👇"
+        - "Read this if you want to get rich"
+        - "Game changing"
+        - "You're doing it wrong"
+
+  instagram:
+    enabled: true
+    name: "Instagram"
+    target_posts_per_week: 1
+    min_spacing_hours: 48
+    preferred_days: ["Wednesday", "Sunday"]
+    preferred_times_utc: ["16:00", "21:00"]
+    constraints:
+      max_caption_characters: 2200
+      optimal_caption_range: [250, 750]
+      max_hashtags: 5
+      max_emojis: 3
+      require_media: true # Mandatory: never schedule text-only as if graphic exists
+      default_aspect_ratio: "1:1"
+    style_guidelines:
+      structure: "Visual-first diagram or clean carousel slide breakdown. Caption provides succinct context and walkthrough of the visual element."
+      prohibited_phrases:
+        - "Link in bio"
+        - "Double tap if"
+        - "Tag a friend"
