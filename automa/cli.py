@@ -109,6 +109,23 @@ def cmd_review(args: argparse.Namespace) -> None:
         print(f"     Content Snippet:\n     {p.content[:150]}...\n")
 
 
+def cmd_auth_linkedin(args: argparse.Namespace) -> None:
+    import os
+    from automa.publishers.linkedin_oauth import run_linkedin_auth_flow
+    client_id = os.getenv("LINKEDIN_CLIENT_ID")
+    client_secret = os.getenv("LINKEDIN_CLIENT_SECRET")
+    redirect_uri = os.getenv("LINKEDIN_REDIRECT_URI", "http://localhost:8000/callback")
+
+    if not client_id or not client_secret:
+        print("[Error] LINKEDIN_CLIENT_ID and LINKEDIN_CLIENT_SECRET must be set in .env.")
+        return
+
+    try:
+        run_linkedin_auth_flow(client_id=client_id, client_secret=client_secret, redirect_uri=redirect_uri)
+    except Exception as e:
+        print(f"[Error] LinkedIn OAuth flow failed: {e}")
+
+
 def cmd_register_task(args: argparse.Namespace) -> None:
     script_path = export_registration_script()
     print(f"\n[Automa] Generated Windows Task Scheduler registration script at:")
@@ -150,6 +167,10 @@ def main() -> None:
     # review
     p_rev = subparsers.add_parser("review", help="Inspect posts requiring manual review")
     p_rev.set_defaults(func=cmd_review)
+
+    # auth-linkedin
+    p_auth_li = subparsers.add_parser("auth-linkedin", help="Authenticate with LinkedIn to acquire Access Token and Person URN")
+    p_auth_li.set_defaults(func=cmd_auth_linkedin)
 
     # register-task
     p_task = subparsers.add_parser("register-task", help="Generate Windows Task Scheduler registration script")

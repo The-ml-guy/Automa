@@ -36,10 +36,62 @@ class DirectPublisher(BasePublisher):
                 return PublishResult(
                     success=False,
                     is_transient_error=False,
-                    error_message="Missing LINKEDIN_ACCESS_TOKEN or LINKEDIN_PERSON_URN.",
+                    error_message="Missing LINKEDIN_ACCESS_TOKEN or LINKEDIN_PERSON_URN in .env. Run 'python -m automa.cli auth-linkedin' to authorize.",
                 )
-            # In a full deployment, this calls https://api.linkedin.com/v2/ugcPosts
-            return PublishResult(success=True, external_post_id=f"urn:li:share:{post.id}")
+
+            url = "https://api.linkedin.com/v2/ugcPosts"
+            headers = {
+                "Authorization": f"Bearer {token}",
+                "X-Restli-Protocol-Version": "2.0.0",
+                "Content-Type": "application/json",
+            }
+            payload = {
+                "author": person_urn,
+                "lifecycleState": "PUBLISHED",
+                "specificContent": {
+                    "com.linkedin.ugc.ShareContent": {
+                        "shareCommentary": {
+                            "text": post.content
+                        },
+                        "shareMediaCategory": "NONE"
+                    }
+                },
+                "visibility": {
+                    "com.linkedin.ugc.MemberNetworkVisibility": "PUBLIC"
+                }
+            }
+            try:
+                import requests
+                resp = requests.post(url, json=payload, headers=headers, timeout=20)
+                if resp.status_code in (200, 201):
+                    res_json = resp.json()
+                    external_id = res_json.get("id") or f"urn:li:share:{post.id}"
+                    return PublishResult(success=True, external_post_id=external_id, details=res_json)
+                elif resp.status_code in (401, 403):
+                    self.notifier.notify_auth_failure("LinkedIn", resp.text)
+                    return PublishResult(
+                        success=False,
+                        is_transient_error=False,
+                        error_message=f"LinkedIn Auth Error (HTTP {resp.status_code}): {resp.text}",
+                    )
+                elif resp.status_code in (429, 500, 502, 503, 504):
+                    return PublishResult(
+                        success=False,
+                        is_transient_error=True,
+                        error_message=f"LinkedIn Transient Error (HTTP {resp.status_code}): {resp.text}",
+                    )
+                else:
+                    return PublishResult(
+                        success=False,
+                        is_transient_error=False,
+                        error_message=f"LinkedIn API Error (HTTP {resp.status_code}): {resp.text}",
+                    )
+            except Exception as e:
+                return PublishResult(
+                    success=False,
+                    is_transient_error=True,
+                    error_message=f"Network exception connecting to LinkedIn API: {str(e)}",
+                )
 
         elif post.platform == "x":
             api_key = os.getenv("X_API_KEY")
