@@ -8,7 +8,7 @@
 $TaskName = "AutomaBackgroundPublishingService"
 $Action = New-ScheduledTaskAction `
     -Execute "F:\automa\.venv\Scripts\python.exe" `
-    -Argument "-m automa.cli daemon" `
+    -Argument "-m automa.cli autostart" `
     -WorkingDirectory "F:\automa"
 
 $Trigger = New-ScheduledTaskTrigger -AtLogon

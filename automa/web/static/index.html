@@ -4,11 +4,18 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Automa — Autonomous Social Media Publishing System</title>
-  <meta name="description" content="Localhost control dashboard and queue observer for Automa autonomous social media engine.">
+  <meta name="description" content="Production control dashboard and queue observer for Automa autonomous social media engine.">
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <!-- Open Graph -->
+  <meta property="og:title" content="Automa — Autonomous Social Publishing Engine">
+  <meta property="og:description" content="Production control dashboard, intelligence hub, and autonomous publishing pipeline.">
+  <meta property="og:type" content="website">
+  <meta property="og:image" content="/favicon.svg">
+  <!-- Fonts & Stylesheet -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/styles.css">
+  <link rel="stylesheet" href="/styles.css?v=2.0.0">
 </head>
 <body class="dark-theme">
   <!-- Top Navigation Header -->
@@ -34,6 +41,10 @@
         <div class="mode-pill" id="mode-pill">
           <span class="mode-label" id="mode-text">DRY RUN</span>
         </div>
+        <a href="/share" class="btn btn-secondary" style="text-decoration:none;" title="Open Share Center">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"></path><polyline points="16 6 12 2 8 6"></polyline><line x1="12" y1="2" x2="12" y2="15"></line></svg>
+          Share Center
+        </a>
         <button class="btn btn-secondary" id="btn-refresh-data" title="Refresh dashboard data">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <polyline points="23 4 23 10 17 10"></polyline>
@@ -72,44 +83,77 @@
         <span class="metric-subtext">Confirmed on network</span>
       </div>
 
-      <div class="metric-card glass-panel" id="card-review">
+      <div class="metric-card glass-panel" id="card-discovered">
         <div class="metric-header">
-          <span class="metric-label">Requires Review</span>
-          <span class="metric-icon amber">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+          <span class="metric-label">AI Intelligence Feeds</span>
+          <span class="metric-icon cyan">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"></circle><path d="M4.93 4.93l4.24 4.24M14.83 14.83l4.24 4.24M14.83 9.17l4.24-4.24M4.93 19.07l4.24-4.24"/></svg>
           </span>
         </div>
-        <div class="metric-value" id="val-review">0</div>
-        <span class="metric-subtext">Safety policy hold</span>
+        <div class="metric-value" id="val-discovered">0</div>
+        <span class="metric-subtext" id="val-discovered-sub">arXiv, HF, GitHub, HN</span>
       </div>
 
-      <div class="metric-card glass-panel" id="card-rejected">
+      <div class="metric-card glass-panel" id="card-ranked">
         <div class="metric-header">
-          <span class="metric-label">Rejected by Gate</span>
+          <span class="metric-label">Ranked Topics</span>
           <span class="metric-icon purple">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
           </span>
         </div>
-        <div class="metric-value" id="val-rejected">0</div>
-        <span class="metric-subtext">Quality score below 85</span>
+        <div class="metric-value" id="val-ranked">0</div>
+        <span class="metric-subtext">6-dimension weighted</span>
       </div>
     </section>
 
     <!-- Control Station -->
     <section class="controls-panel glass-panel" id="controls-panel">
       <div class="controls-left">
-        <h2 class="section-title">Automation Control Deck</h2>
-        <p class="section-desc">Trigger autonomous generation or force a publishing cycle of ready posts.</p>
+        <h2 class="section-title">Multi-Agent Intelligence Operations Deck</h2>
+        <p class="section-desc">Run autonomous discovery, source verification, topic scoring, and multi-platform copywriting.</p>
       </div>
       <div class="controls-actions">
-        <button class="btn btn-primary" id="btn-trigger-generate">
+        <button class="btn btn-primary" id="btn-trigger-pipeline" title="Run full 6-agent pipeline">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+          Run Full Pipeline
+        </button>
+        <button class="btn btn-secondary" id="btn-trigger-discover" title="Discover fresh papers & repos">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+          Discover Feeds
+        </button>
+        <button class="btn btn-secondary" id="btn-trigger-generate">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
-          Generate New Posts
+          Draft Scheduled
         </button>
         <button class="btn btn-success" id="btn-trigger-publish">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>
           Publish Due Queue
         </button>
+      </div>
+    </section>
+
+    <!-- AI Intelligence Section (Feeds & Ranked Matrix) -->
+    <section class="intelligence-hub-section glass-panel" id="intelligence-hub-section">
+      <div class="intelligence-header">
+        <div>
+          <h2 class="section-title">AI Intelligence Hub & Trend Discovery</h2>
+          <p class="section-desc">Live research feeds, verified primary sources, and 6-dimension weighted ranking matrix.</p>
+        </div>
+        <div class="hub-tabs-group" id="hub-tabs" role="tablist" aria-label="Intelligence Views">
+          <button class="tab-btn active" id="tab-intel-rankings" data-intel-view="rankings" role="tab" aria-selected="true">Top Ranked Topics</button>
+          <button class="tab-btn" id="tab-intel-feeds" data-intel-view="feeds" role="tab" aria-selected="false">Live Intelligence Feeds</button>
+        </div>
+      </div>
+
+      <!-- Ranked Topics Grid -->
+      <div class="intelligence-grid" id="ranked-topics-grid">
+        <!-- Dynamically rendered -->
+        <div class="loading-state">Loading ranked AI topics...</div>
+      </div>
+
+      <!-- Discovered Feeds Grid (Hidden by default) -->
+      <div class="intelligence-grid hidden" id="discovered-feeds-grid">
+        <!-- Dynamically rendered -->
       </div>
     </section>
 
@@ -130,16 +174,17 @@
     <!-- Main Content Area: Tabs & Posts Explorer -->
     <section class="content-explorer glass-panel" id="content-explorer">
       <div class="explorer-header">
-        <div class="tabs-group" id="filter-tabs">
-          <button class="tab-btn active" data-filter="all" id="tab-all">All Posts</button>
-          <button class="tab-btn" data-filter="SCHEDULED" id="tab-scheduled">Scheduled</button>
-          <button class="tab-btn" data-filter="PUBLISHED" id="tab-published">Published</button>
-          <button class="tab-btn" data-filter="REJECTED" id="tab-rejected">Rejected</button>
-          <button class="tab-btn" data-filter="MANUAL_REVIEW_REQUIRED" id="tab-review">Needs Review</button>
+        <div class="tabs-group" id="filter-tabs" role="tablist" aria-label="Post Status Filters">
+          <button class="tab-btn active" data-filter="all" id="tab-all" role="tab" aria-selected="true">All Posts</button>
+          <button class="tab-btn" data-filter="SCHEDULED" id="tab-scheduled" role="tab" aria-selected="false">Scheduled</button>
+          <button class="tab-btn" data-filter="PUBLISHED" id="tab-published" role="tab" aria-selected="false">Published</button>
+          <button class="tab-btn" data-filter="REJECTED" id="tab-rejected" role="tab" aria-selected="false">Rejected</button>
+          <button class="tab-btn" data-filter="MANUAL_REVIEW_REQUIRED" id="tab-review" role="tab" aria-selected="false">Needs Review</button>
         </div>
 
         <div class="platform-filter-group">
-          <select id="select-platform-filter" class="form-select">
+          <label for="select-platform-filter" class="sr-only" style="position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); border: 0;">Filter by platform</label>
+          <select id="select-platform-filter" class="form-select" aria-label="Filter posts by network">
             <option value="">All Networks</option>
             <option value="linkedin">LinkedIn</option>
             <option value="x">X (Twitter)</option>
@@ -232,14 +277,20 @@
       </div>
 
       <div class="modal-footer" id="modal-footer-actions">
+        <button class="btn btn-x" id="btn-modal-share-x" style="margin-right: auto; display: inline-flex;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+          Share to X
+        </button>
+        <button class="btn btn-secondary" id="btn-modal-copy-img" style="display: inline-flex;">📋 Copy Image</button>
+        <button class="btn btn-success" id="btn-modal-publish-now">Publish API 🚀</button>
         <button class="btn btn-secondary" id="btn-modal-dismiss">Close</button>
       </div>
     </div>
   </dialog>
 
   <!-- Toast Notification Container -->
-  <div class="toast-container" id="toast-container"></div>
+  <div class="toast-container" id="toast-container" role="alert" aria-live="polite"></div>
 
-  <script src="/app.js"></script>
+  <script src="/app.js?v=2.0.0"></script>
 </body>
 </html>

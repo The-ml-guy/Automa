@@ -11,8 +11,8 @@ document.addEventListener("DOMContentLoaded", () => {
   // DOM Elements
   const valScheduled = document.getElementById("val-scheduled");
   const valPublished = document.getElementById("val-published");
-  const valReview = document.getElementById("val-review");
-  const valRejected = document.getElementById("val-rejected");
+  const valDiscovered = document.getElementById("val-discovered");
+  const valRanked = document.getElementById("val-ranked");
   const modeText = document.getElementById("mode-text");
   const postsTableBody = document.getElementById("posts-table-body");
   const auditLogList = document.getElementById("audit-log-list");
@@ -20,11 +20,17 @@ document.addEventListener("DOMContentLoaded", () => {
   const reviewItemsContainer = document.getElementById("review-items-container");
   const reviewHeadline = document.getElementById("review-count-headline");
 
+  const rankedTopicsGrid = document.getElementById("ranked-topics-grid");
+  const discoveredFeedsGrid = document.getElementById("discovered-feeds-grid");
+  const hubTabs = document.querySelectorAll("#hub-tabs .tab-btn");
+
   const btnRefresh = document.getElementById("btn-refresh-data");
+  const btnTriggerPipeline = document.getElementById("btn-trigger-pipeline");
+  const btnTriggerDiscover = document.getElementById("btn-trigger-discover");
   const btnTriggerGenerate = document.getElementById("btn-trigger-generate");
   const btnTriggerPublish = document.getElementById("btn-trigger-publish");
   const selectPlatform = document.getElementById("select-platform-filter");
-  const filterTabs = document.querySelectorAll(".tab-btn");
+  const filterTabs = document.querySelectorAll("#filter-tabs .tab-btn");
 
   const modal = document.getElementById("post-detail-modal");
   const btnCloseModal = document.getElementById("btn-close-modal");
@@ -46,14 +52,18 @@ document.addEventListener("DOMContentLoaded", () => {
   // Fetch Status and Metrics
   async function fetchStatus() {
     try {
-      const res = await fetch("/api/status");
-      if (!res.ok) throw new Error("Failed to reach server");
-      const data = await res.json();
+      const [resStatus, resIntel] = await Promise.all([
+        fetch("/api/status"),
+        fetch("/api/intelligence/stats")
+      ]);
+      if (!resStatus.ok) throw new Error("Failed to reach server");
+      const data = await resStatus.json();
+      const intel = resIntel.ok ? await resIntel.json() : {};
 
       valScheduled.textContent = data.queue_counts.SCHEDULED || 0;
       valPublished.textContent = data.queue_counts.PUBLISHED || 0;
-      valReview.textContent = data.queue_counts.MANUAL_REVIEW_REQUIRED || 0;
-      valRejected.textContent = data.queue_counts.REJECTED || 0;
+      if (valDiscovered) valDiscovered.textContent = intel.total_discovered || 0;
+      if (valRanked) valRanked.textContent = intel.total_ranked || 0;
 
       modeText.textContent = data.dry_run ? "DRY RUN ACTIVE" : `LIVE (${data.publisher_type.toUpperCase()})`;
 
@@ -72,6 +82,112 @@ document.addEventListener("DOMContentLoaded", () => {
     } catch (err) {
       console.error("Error fetching status:", err);
     }
+  }
+
+  // Fetch and Render Intelligence Hub (Ranked Topics & Feeds)
+  async function fetchIntelligence() {
+    try {
+      const [resRank, resDisc] = await Promise.all([
+        fetch("/api/intelligence/rankings"),
+        fetch("/api/intelligence/discovered")
+      ]);
+
+      if (resRank.ok) {
+        const rankings = await resRank.json();
+        renderRankings(rankings);
+      }
+
+      if (resDisc.ok) {
+        const discovered = await resDisc.json();
+        renderDiscoveredFeeds(discovered);
+      }
+    } catch (err) {
+      console.error("Error fetching intelligence data:", err);
+    }
+  }
+
+  function renderRankings(rankings) {
+    if (!rankedTopicsGrid) return;
+    if (!rankings || rankings.length === 0) {
+      rankedTopicsGrid.innerHTML = `<div class="empty-state">No ranked topics yet. Click 'Run Full Pipeline' or 'Discover Feeds'.</div>`;
+      return;
+    }
+
+    rankedTopicsGrid.innerHTML = rankings.slice(0, 8).map(r => `
+      <div class="intel-card">
+        <div class="intel-card-header">
+          <span class="intel-source-tag ${r.source_type.toLowerCase()}">${r.source_type.toUpperCase()}</span>
+          <span class="total-score-badge">${r.total_score.toFixed(1)} / 100</span>
+        </div>
+        <div class="intel-card-title">${escapeHtml(r.title)}</div>
+        <div class="intel-meta-row">
+          <span>${r.authors ? escapeHtml(r.authors.substring(0, 30)) : 'Community'}</span>
+          <span>${r.ranked_at ? r.ranked_at.substring(0, 10) : ''}</span>
+        </div>
+        <div class="intel-abstract">${escapeHtml(r.abstract || '')}</div>
+        <div class="score-breakdown-box">
+          <div class="score-mini-stat">
+            <span class="score-mini-label">Recency (20%)</span>
+            <span class="score-mini-val">${r.score_recency}</span>
+          </div>
+          <div class="score-mini-stat">
+            <span class="score-mini-label">Utility (20%)</span>
+            <span class="score-mini-val">${r.score_usefulness}</span>
+          </div>
+          <div class="score-mini-stat">
+            <span class="score-mini-label">Signif (20%)</span>
+            <span class="score-mini-val">${r.score_significance}</span>
+          </div>
+          <div class="score-mini-stat">
+            <span class="score-mini-label">Open-Src (15%)</span>
+            <span class="score-mini-val">${r.score_accessibility}</span>
+          </div>
+          <div class="score-mini-stat">
+            <span class="score-mini-label">Credib (15%)</span>
+            <span class="score-mini-val">${r.score_credibility}</span>
+          </div>
+          <div class="score-mini-stat">
+            <span class="score-mini-label">Novelty (10%)</span>
+            <span class="score-mini-val">${r.score_novelty}</span>
+          </div>
+        </div>
+        <div class="intel-card-footer">
+          <span style="font-size: 0.7rem; color: var(--text-muted);">${escapeHtml(r.notes || 'Verified')}</span>
+          <a href="${r.url}" target="_blank" rel="noopener noreferrer" class="link-btn">
+            Inspect Source ↗
+          </a>
+        </div>
+      </div>
+    `).join("");
+  }
+
+  function renderDiscoveredFeeds(items) {
+    if (!discoveredFeedsGrid) return;
+    if (!items || items.length === 0) {
+      discoveredFeedsGrid.innerHTML = `<div class="empty-state">No feed items discovered yet.</div>`;
+      return;
+    }
+
+    discoveredFeedsGrid.innerHTML = items.slice(0, 12).map(item => `
+      <div class="intel-card">
+        <div class="intel-card-header">
+          <span class="intel-source-tag ${item.source_type.toLowerCase()}">${item.source_type.toUpperCase()}</span>
+          <span style="font-size: 0.7rem; color: var(--text-muted);">${item.primary_category || ''}</span>
+        </div>
+        <div class="intel-card-title">${escapeHtml(item.title)}</div>
+        <div class="intel-meta-row">
+          <span>${item.authors ? escapeHtml(item.authors.substring(0, 30)) : 'Team'}</span>
+          <span>${item.published_at ? item.published_at.substring(0, 10) : ''}</span>
+        </div>
+        <div class="intel-abstract">${escapeHtml(item.abstract || 'No abstract.')}</div>
+        <div class="intel-card-footer">
+          <span style="font-size: 0.7rem; color: var(--text-muted);">Status: ${item.status}</span>
+          <a href="${item.url}" target="_blank" rel="noopener noreferrer" class="link-btn">
+            Open URL ↗
+          </a>
+        </div>
+      </div>
+    `).join("");
   }
 
   // Fetch Posts
@@ -106,6 +222,10 @@ document.addEventListener("DOMContentLoaded", () => {
       const dateDisplay = post.scheduled_at ? post.scheduled_at.replace("T", " ").substring(0, 16) : "—";
       const scoreClass = post.quality_score >= 85 ? "score-pass" : "score-fail";
       const preview = escapeHtml(post.content ? post.content.substring(0, 120) : "");
+      const canPublish = post.status !== "PUBLISHED";
+      const publishBtn = canPublish
+        ? `<button class="btn btn-success btn-quick-publish" data-id="${post.id}" style="padding: 0.35rem 0.65rem; font-size: 0.75rem; margin-left: 0.35rem;" title="Publish immediately to ${post.platform.toUpperCase()}">Publish 🚀</button>`
+        : `<button class="btn btn-secondary" disabled style="padding: 0.35rem 0.65rem; font-size: 0.75rem; margin-left: 0.35rem; opacity: 0.6;">Done ✓</button>`;
 
       return `
         <tr>
@@ -117,10 +237,11 @@ document.addEventListener("DOMContentLoaded", () => {
           <td><span class="score-badge ${scoreClass}">${post.quality_score}/100</span></td>
           <td><span class="status-badge status-${post.status}">${post.status}</span></td>
           <td style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-muted);">${dateDisplay}</td>
-          <td>
+          <td style="white-space: nowrap;">
             <button class="btn btn-secondary btn-inspect" data-id="${post.id}" style="padding: 0.35rem 0.75rem; font-size: 0.75rem;">
               Inspect
             </button>
+            ${publishBtn}
           </td>
         </tr>
       `;
@@ -132,6 +253,16 @@ document.addEventListener("DOMContentLoaded", () => {
         const id = btn.getAttribute("data-id");
         const post = allPosts.find(p => p.id === id);
         if (post) openPostModal(post);
+      });
+    });
+
+    // Attach quick publish handlers
+    document.querySelectorAll(".btn-quick-publish").forEach(btn => {
+      btn.addEventListener("click", async () => {
+        const id = btn.getAttribute("data-id");
+        btn.disabled = true;
+        btn.innerHTML = `Sending...`;
+        await publishPostById(id);
       });
     });
   }
@@ -206,11 +337,20 @@ document.addEventListener("DOMContentLoaded", () => {
       verdictText.textContent = "REVISE OR REJECT (Score below 85)";
     }
 
-    // Media Concept
+    // Media Concept & Image Preview
     const mediaBox = document.getElementById("modal-media-box");
-    if (post.media_prompt || (post.media_urls && post.media_urls.length > 0)) {
+    const mediaSpec = document.getElementById("modal-media-spec");
+    if (post.media_urls && post.media_urls.length > 0) {
       mediaBox.classList.remove("hidden");
-      document.getElementById("modal-media-spec").textContent = post.media_prompt || post.media_urls.join("\n");
+      const localFile = post.media_urls[0];
+      const filename = localFile.split(/[\\/]/).pop();
+      mediaSpec.innerHTML = `
+        <div style="margin-bottom: 0.5rem; font-size: 0.8rem; color: var(--text-muted);">${escapeHtml(post.media_prompt || 'Technical Graphic Card')}</div>
+        <img src="/media/${encodeURIComponent(filename)}" alt="Visual Card" style="width: 100%; border-radius: 8px; border: 1px solid var(--border-color); display: block; margin-top: 0.5rem;" onerror="this.style.display='none'" />
+      `;
+    } else if (post.media_prompt) {
+      mediaBox.classList.remove("hidden");
+      mediaSpec.textContent = post.media_prompt;
     } else {
       mediaBox.classList.add("hidden");
     }
@@ -231,6 +371,72 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     reportBox.innerHTML = reportHtml;
 
+    // Configure Modal Share to X & Copy Image Buttons
+    const btnModalShareX = document.getElementById("btn-modal-share-x");
+    const btnModalCopyImg = document.getElementById("btn-modal-copy-img");
+    const hasImage = post.media_urls && post.media_urls.length > 0 && !post.media_urls[0].endsWith("_graphic.png");
+    const imageUrl = hasImage ? `/media/${encodeURIComponent(post.media_urls[0].split(/[\\/]/).pop())}` : null;
+
+    if (btnModalCopyImg) {
+      if (imageUrl) {
+        btnModalCopyImg.style.display = "inline-flex";
+        btnModalCopyImg.onclick = async () => {
+          btnModalCopyImg.textContent = "⏳ Copying...";
+          try {
+            const resp = await fetch(imageUrl);
+            const blob = await resp.blob();
+            await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
+            showToast("✓ Image copied to clipboard! Paste into X or LinkedIn with Ctrl+V.", "success");
+            btnModalCopyImg.textContent = "✓ Copied!";
+          } catch (e) {
+            showToast("Failed to copy image to clipboard.", "error");
+            btnModalCopyImg.textContent = "📋 Copy Image";
+          }
+          setTimeout(() => { btnModalCopyImg.textContent = "📋 Copy Image"; }, 2000);
+        };
+      } else {
+        btnModalCopyImg.style.display = "none";
+      }
+    }
+
+    if (btnModalShareX) {
+      btnModalShareX.style.display = "inline-flex";
+      btnModalShareX.onclick = async () => {
+        // If image exists, copy it to clipboard first
+        if (imageUrl) {
+          try {
+            const resp = await fetch(imageUrl);
+            const blob = await resp.blob();
+            await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
+            showToast("📋 Image copied! In Twitter, press Ctrl+V to attach the image.", "success");
+          } catch (e) {
+            console.warn(e);
+          }
+        }
+        const text = encodeURIComponent(post.content.substring(0, 280));
+        window.open(`https://twitter.com/intent/tweet?text=${text}`, "_blank");
+      };
+    }
+
+    // Configure Modal Publish Button
+    const btnModalPublish = document.getElementById("btn-modal-publish-now");
+    if (btnModalPublish) {
+      if (post.status === "PUBLISHED") {
+        btnModalPublish.disabled = true;
+        btnModalPublish.textContent = "Already Published ✓";
+        btnModalPublish.className = "btn btn-secondary";
+      } else {
+        btnModalPublish.disabled = false;
+        btnModalPublish.className = "btn btn-success";
+        btnModalPublish.textContent = `Publish to ${post.platform.toUpperCase()} Now 🚀`;
+        btnModalPublish.onclick = async () => {
+          btnModalPublish.disabled = true;
+          btnModalPublish.textContent = "Dispatching...";
+          await publishPostById(post.id);
+        };
+      }
+    }
+
     modal.showModal();
   }
 
@@ -241,11 +447,95 @@ document.addEventListener("DOMContentLoaded", () => {
     if (e.target === modal) modal.close();
   });
 
+  // Hub View Tabs (Ranked vs Feeds)
+  hubTabs.forEach(tab => {
+    tab.addEventListener("click", () => {
+      hubTabs.forEach(t => {
+        t.classList.remove("active");
+        t.setAttribute("aria-selected", "false");
+      });
+      tab.classList.add("active");
+      tab.setAttribute("aria-selected", "true");
+      const view = tab.getAttribute("data-intel-view");
+      if (view === "rankings") {
+        rankedTopicsGrid.classList.remove("hidden");
+        discoveredFeedsGrid.classList.add("hidden");
+      } else {
+        rankedTopicsGrid.classList.add("hidden");
+        discoveredFeedsGrid.classList.remove("hidden");
+      }
+    });
+  });
+
+  // Trigger Multi-Agent Pipeline
+  if (btnTriggerPipeline) {
+    btnTriggerPipeline.addEventListener("click", async () => {
+      btnTriggerPipeline.disabled = true;
+      btnTriggerPipeline.innerHTML = `<span class="pulse-dot"></span> Pipeline Running...`;
+      showToast("Starting 6-agent intelligence pipeline (Discover -> Verify -> Rank -> Simplify -> Strategy -> Copywrite)...", "info");
+
+      try {
+        const res = await fetch("/api/intelligence/pipeline", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ discovery_limit: 5, platforms: ["linkedin", "x"] })
+        });
+        const data = await res.json();
+        if (data.success) {
+          showToast(`Pipeline Complete! Selected: "${data.topic_chosen}". Scheduled: ${data.posts_scheduled_count} post(s).`, "success");
+        } else {
+          showToast(`Pipeline Alert: ${data.error || 'Failed'}`, "error");
+        }
+        await refreshAll();
+      } catch (err) {
+        showToast("Error executing intelligence pipeline.", "error");
+      } finally {
+        btnTriggerPipeline.disabled = false;
+        btnTriggerPipeline.innerHTML = `
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+          Run Full Pipeline
+        `;
+      }
+    });
+  }
+
+  // Trigger Feed Discovery
+  if (btnTriggerDiscover) {
+    btnTriggerDiscover.addEventListener("click", async () => {
+      btnTriggerDiscover.disabled = true;
+      btnTriggerDiscover.innerHTML = `<span class="pulse-dot"></span> Fetching Feeds...`;
+      showToast("Querying arXiv, Hugging Face, and Hacker News feeds...", "info");
+
+      try {
+        const res = await fetch("/api/intelligence/discover", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ limit: 5 })
+        });
+        const data = await res.json();
+        showToast(`Discovered ${data.new_items_count || 0} fresh AI research & code items.`, "success");
+        await refreshAll();
+      } catch (err) {
+        showToast("Error polling research feeds.", "error");
+      } finally {
+        btnTriggerDiscover.disabled = false;
+        btnTriggerDiscover.innerHTML = `
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+          Discover Feeds
+        `;
+      }
+    });
+  }
+
   // Filter Tabs
   filterTabs.forEach(tab => {
     tab.addEventListener("click", () => {
-      filterTabs.forEach(t => t.classList.remove("active"));
+      filterTabs.forEach(t => {
+        t.classList.remove("active");
+        t.setAttribute("aria-selected", "false");
+      });
       tab.classList.add("active");
+      tab.setAttribute("aria-selected", "true");
       currentFilter = tab.getAttribute("data-filter");
       renderFilteredPosts();
     });
@@ -278,21 +568,50 @@ document.addEventListener("DOMContentLoaded", () => {
       btnTriggerGenerate.disabled = false;
       btnTriggerGenerate.innerHTML = `
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
-        Generate New Posts
+        Draft Scheduled
       `;
     }
   });
+
+  // Publish single post by ID
+  async function publishPostById(postId) {
+    showToast(`Dispatching post to network...`, "info");
+    try {
+      const res = await fetch("/api/posts/publish", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ post_id: postId })
+      });
+      const data = await res.json();
+      if (data.success) {
+        showToast(`Post published to ${data.platform.toUpperCase()} successfully!`, "success");
+        if (modal && modal.open) modal.close();
+        await refreshAll();
+      } else {
+        showToast(`Publishing failed: ${data.error || "Unknown error"}`, "error");
+        await refreshAll();
+      }
+    } catch (err) {
+      showToast("Network error publishing post.", "error");
+    }
+  }
 
   // Trigger Publishing
   btnTriggerPublish.addEventListener("click", async () => {
     btnTriggerPublish.disabled = true;
     btnTriggerPublish.innerHTML = `<span class="pulse-dot"></span> Dispatching...`;
-    showToast("Publishing due posts...", "info");
+    showToast("Publishing queued posts...", "info");
 
     try {
-      const res = await fetch("/api/publish", { method: "POST" });
+      const res = await fetch("/api/publish", { 
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ force: true })
+      });
       const data = await res.json();
-      showToast(`Publishing cycle complete: ${data.published || 0} published, ${data.failed || 0} failed.`, "success");
+      const pubCount = data.published || 0;
+      const failCount = data.failed || 0;
+      showToast(`Publishing cycle complete: ${pubCount} published, ${failCount} failed.`, pubCount > 0 ? "success" : "info");
       await refreshAll();
     } catch (err) {
       showToast("Error processing publishing queue.", "error");
@@ -300,7 +619,7 @@ document.addEventListener("DOMContentLoaded", () => {
       btnTriggerPublish.disabled = false;
       btnTriggerPublish.innerHTML = `
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
-        Publish Due Queue
+        Publish Queue Now
       `;
     }
   });
@@ -309,6 +628,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   async function refreshAll() {
     await fetchStatus();
+    await fetchIntelligence();
     await fetchPosts();
   }
 

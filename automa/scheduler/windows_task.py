@@ -24,7 +24,7 @@ def generate_powershell_registration_script() -> str:
 $TaskName = "AutomaBackgroundPublishingService"
 $Action = New-ScheduledTaskAction `
     -Execute "{python_exe}" `
-    -Argument "-m automa.cli daemon" `
+    -Argument "-m automa.cli autostart" `
     -WorkingDirectory "{BASE_DIR}"
 
 $Trigger = New-ScheduledTaskTrigger -AtLogon

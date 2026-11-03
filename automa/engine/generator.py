@@ -42,13 +42,34 @@ class ContentEngine:
 
     def _select_topic(self, recent_posts: List[PostRecord]) -> Optional[Tuple[str, str]]:
         """
-        Picks a fresh, useful, defensible engineering topic from knowledge base
-        that has not been recently scheduled.
+        Picks a fresh, useful, defensible engineering topic from intelligence rankings
+        or brand knowledge base that has not been recently scheduled.
         Returns (topic_name, topic_context) or None if no fresh topic is available.
         """
         recent_topics = [p.topic.lower() for p in recent_posts[:15]]
 
+        # 1. Prioritize live multi-agent intelligence rankings if available
+        ranked_topics = self.repo.get_top_ranked_topics(limit=10)
+        for r in ranked_topics:
+            title = r.get("title", "")
+            if title and title.lower() not in recent_topics:
+                distillation = self.repo.get_research_distillation(r.get("item_id", ""))
+                context = (
+                    f"AI Intelligence ({r.get('source_type', '').upper()}) Score: {r.get('total_score', 0)}/100. "
+                    f"Abstract: {r.get('abstract', '')[:200]}... "
+                    f"Core Idea: {distillation.core_idea if distillation else 'Systems-level breakthrough'}."
+                )
+                return title, context
+
         candidate_topics = [
+            (
+                "Assistive Edge AI with Project Lighthouse",
+                "Project: PROJ-003 (Assistive Computer Vision, AWS YOLOv8 training, ONNX/TFLite edge quantization, Flutter TTS dialogue).",
+            ),
+            (
+                "Machine Learning Algorithms From Scratch in Python",
+                "Project: PROJ-004 (100projects: 100+ modular ML algorithms from scratch in pure Python, vectorization mechanics, avoiding framework bloat).",
+            ),
             (
                 "Cron Schedulers vs Persistent State Machines",
                 "Experiences: EXP-001 (Cron job overlap, concurrent locks, heartbeats) and Opinions: OPIN-003.",
@@ -165,18 +186,58 @@ PREVIOUS DRAFT CRITIQUE (You MUST fix these issues):
         media_urls = []
         media_prompt = None
 
-        # Instagram visual requirement setup
+        # Generate editorial visual card for ALL platforms
         has_media = False
-        if platform == "instagram":
-            # Create a concrete visual diagram spec and simulated image asset
-            media_prompt = f"System Architecture Flowchart: {topic}. Clean dark-mode diagram with high contrast text."
-            asset_filename = f"{post_id}_graphic.png"
-            asset_path = CONTENT_DIR / "queue" / asset_filename
-            # Write a placeholder asset file so the system verifies physical media existence
-            with open(asset_path, "w", encoding="utf-8") as f:
-                f.write(f"IMAGE_ASSET_SPECIFICATION: {media_prompt}\nASPECT_RATIO: 1:1\nPLATFORM: Instagram")
-            media_urls.append(str(asset_path))
+        try:
+            from automa.media.renderer import build_brief_from_research, EditorialCardRenderer
+            renderer = EditorialCardRenderer()
+
+            # Get distillation if available
+            item = None
+            ranked = self.repo.get_top_ranked_topics(limit=1)
+            if ranked:
+                item = self.repo.get_discovered_item_by_id(ranked[0].get("item_id", ""))
+            distillation = self.repo.get_research_distillation(ranked[0].get("item_id", "")) if ranked else None
+
+            raw_meta = item.raw_metadata if (item and isinstance(item.raw_metadata, dict)) else {}
+
+            card_brief = build_brief_from_research(
+                item_title=topic,
+                item_abstract=topic_context[:300],
+                raw_metadata=raw_meta,
+                distillation_problem=distillation.problem if distillation else None,
+                distillation_core_idea=distillation.core_idea if distillation else topic_context[:200],
+                distillation_what_is_new=distillation.what_is_new if distillation else None,
+                distillation_limitations=distillation.limitations if distillation else None,
+                platform=platform,
+                post_id=post_id,
+            )
+            card_path = renderer.render(card_brief)
+            media_urls = [str(card_path)]
+            media_prompt = f"Editorial Card [{card_brief.template}]: {topic}"
             has_media = True
+            logger.info("Generated editorial card for %s: %s", platform, card_path)
+        except Exception as e:
+            logger.warning("Editorial renderer failed for %s, trying PIL fallback: %s", platform, e)
+            try:
+                from automa.media.card_generator import VisualCardGenerator, extract_key_takeaways
+                card_gen = VisualCardGenerator()
+                takeaways = extract_key_takeaways("", topic, topic_context)
+                card_path = card_gen.generate_card(
+                    topic=topic,
+                    category="ENGINEERING INSIGHT",
+                    takeaways=takeaways,
+                    platform=platform,
+                    post_id=post_id,
+                )
+                media_urls = [str(card_path)]
+                media_prompt = f"Technical Card: {topic}"
+                has_media = True
+            except Exception as e2:
+                logger.warning("All card generation failed for %s: %s", platform, e2)
+                if platform == "instagram":
+                    media_prompt = f"Architecture Diagram: {topic}"
+                    has_media = True
 
         # Generation and auto-revision loop (up to max_auto_revisions attempts)
         for attempt in range(self.global_cfg.max_auto_revisions + 1):
@@ -210,6 +271,23 @@ PREVIOUS DRAFT CRITIQUE (You MUST fix these issues):
         if not verdict:
             return None
 
+        # Re-render card with finalized content if possible
+        if has_media and current_content:
+            try:
+                from automa.media.card_generator import VisualCardGenerator, extract_key_takeaways
+                card_gen = VisualCardGenerator()
+                takeaways = extract_key_takeaways(current_content, topic, topic_context)
+                card_path = card_gen.generate_card(
+                    topic=topic,
+                    category="ENGINEERING INSIGHT",
+                    takeaways=takeaways,
+                    platform=platform,
+                    post_id=post_id,
+                )
+                media_urls = [str(card_path)]
+            except Exception as e:
+                logger.warning("Refining card with final content failed: %s", e)
+
         # Handle X threads if content has multiple tweet markers
         thread_items = []
         if platform == "x" and "\n---\n" in current_content:
@@ -240,6 +318,8 @@ PREVIOUS DRAFT CRITIQUE (You MUST fix these issues):
                 "emoji_count": verdict.rule_result.emoji_count,
                 "hashtag_count": verdict.rule_result.hashtag_count,
                 "similarity": verdict.rule_result.highest_similarity,
+                "dimension_scores": verdict.dimension_scores,
+                "remediation_advice": verdict.remediation_advice,
             },
             revision_count=verdict.rule_result.errors and attempt or 0,
             fingerprint=verdict.fingerprint,
@@ -267,21 +347,21 @@ PREVIOUS DRAFT CRITIQUE (You MUST fix these issues):
 
         return post_record
 
-    def run_scheduled_generation(self) -> Dict[str, Any]:
+    def run_scheduled_generation(self, force: bool = False) -> Dict[str, Any]:
         """
         Executes a scheduled generation run across all enabled platforms.
         Enforces conservative weekly limits and skips run if appropriate.
         """
         run_id = f"gen_run_{uuid.uuid4().hex[:8]}"
         start_time = datetime.now(timezone.utc).isoformat()
-        logger.info("Starting content generation run %s", run_id)
+        logger.info("Starting content generation run %s (force=%s)", run_id, force)
 
         recent_posts = self.repo.get_recent_posts(limit=50)
 
         # Check weekly cap
         one_week_ago = (datetime.now(timezone.utc) - timedelta(days=7)).isoformat()
         posts_last_week = [p for p in recent_posts if p.created_at >= one_week_ago and p.status in ("SCHEDULED", "PUBLISHED")]
-        if len(posts_last_week) >= self.global_cfg.conservative_weekly_cap:
+        if not force and len(posts_last_week) >= self.global_cfg.conservative_weekly_cap:
             reason = f"Weekly publishing cap reached ({len(posts_last_week)}/{self.global_cfg.conservative_weekly_cap} posts this week). Skipping generation."
             logger.info(reason)
             self.repo.record_generation_run(
@@ -297,7 +377,42 @@ PREVIOUS DRAFT CRITIQUE (You MUST fix these issues):
             )
             return {"status": "SKIPPED", "reason": reason}
 
-        # Select topic
+        # 1. Primary Path: Execute End-to-End Multi-Agent Content Intelligence Pipeline
+        try:
+            from automa.agents.orchestrator import ContentIntelligencePipeline
+            pipeline = ContentIntelligencePipeline(repo=self.repo)
+            enabled_platforms = [p for p, cfg in self.platforms.items() if cfg.enabled]
+            pipe_res = pipeline.run_full_pipeline(
+                discovery_limit_per_source=3,
+                target_platforms=enabled_platforms or ["linkedin", "x", "instagram"],
+            )
+            if pipe_res.get("success") and pipe_res.get("posts_created"):
+                posts = pipe_res.get("posts_created", [])
+                sched_cnt = pipe_res.get("posts_scheduled_count", 0)
+                status_str = "SUCCESS" if sched_cnt > 0 else "PARTIAL"
+                self.repo.record_generation_run(
+                    run_id=run_id,
+                    started_at=start_time,
+                    completed_at=datetime.now(timezone.utc).isoformat(),
+                    status=status_str,
+                    topic_chosen=pipe_res.get("topic_chosen", "Multi-Agent Discovery"),
+                    reason=None,
+                    posts_generated=len(posts),
+                    posts_scheduled=sched_cnt,
+                    details=pipe_res.get("steps", {}),
+                )
+                return {
+                    "status": status_str,
+                    "topic": pipe_res.get("topic_chosen"),
+                    "generated_count": len(posts),
+                    "scheduled_count": sched_cnt,
+                    "posts": posts,
+                    "pipeline_run_id": pipe_res.get("pipeline_run_id"),
+                }
+        except Exception as e:
+            logger.warning("Multi-agent intelligence pipeline run failed, falling back to local generator: %s", e)
+
+        # 2. Fallback Path: Local Content Selection & Generation
         topic_info = self._select_topic(recent_posts)
         if not topic_info:
             reason = "No sufficiently good, defensible idea available in knowledge base. Skipping slot per editorial standards."

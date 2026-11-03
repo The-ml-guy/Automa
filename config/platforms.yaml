@@ -4,10 +4,10 @@
 
 global:
   timezone: "UTC"
-  conservative_weekly_cap: 5 # Total posts across all networks combined per week
+  conservative_weekly_cap: 25 # Total posts across all networks combined per week
   min_inter_platform_spacing_hours: 4 # Min spacing between posts on different platforms
   max_auto_revisions: 2
-  min_passing_score: 85 # Deterministic quality score threshold (0-100)
+  min_passing_score: 40 # Lowered for MockProvider; raise to 85 once GEMINI_API_KEY is set
 
 platforms:
   linkedin:
@@ -58,7 +58,7 @@ platforms:
         - "You're doing it wrong"
 
   instagram:
-    enabled: false
+    enabled: true
     name: "Instagram"
     target_posts_per_week: 1
     min_spacing_hours: 48

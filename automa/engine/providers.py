@@ -127,6 +127,90 @@ class MockProvider(BaseAIProvider):
                     "Always add Full Jitter: randomize sleep between 0 and your backoff delay."
                 )
 
+        elif "lighthouse" in prompt_lower or "assistive" in prompt_lower:
+            if "platform: linkedin" in prompt_lower:
+                return (
+                    "Most computer vision systems stop at generating bounding boxes on a screen. For visually impaired users, a bounding box on a display is useless—low latency and actionable audio are what matter.\n\n"
+                    "In Project Lighthouse, we set out to build an assistive ecosystem that converts physical surroundings into conversational audio cues in real time.\n\n"
+                    "Here is how the architecture is wired:\n\n"
+                    "1. Cloud Training Pipeline:\n"
+                    "We trained custom YOLOv8 models on AWS (SageMaker + S3) targeting real-world obstacle classes: doorways, walkway hazards, curbs, and everyday personal objects.\n\n"
+                    "2. Edge Quantization:\n"
+                    "Cloud API roundtrips introduce too much latency for navigation. We quantized the trained weights into ONNX / TFLite formats for native on-device inference inside Flutter.\n\n"
+                    "3. Distance & Dialogue Layer:\n"
+                    "Detection alone does not prevent collisions. We paired classification with monocular depth estimation to calculate relative physical distance, feeding the output directly into a local Text-to-Speech (TTS) engine.\n\n"
+                    "The core engineering lesson: The bottleneck in assistive edge AI is rarely raw model accuracy—it is balancing inference frame rates with audio queue pacing so the user is not overwhelmed with auditory clutter.\n\n"
+                    "Open-source codebase: https://github.com/The-ml-guy/Project_Lighthouse\n\n"
+                    "#MachineLearning #EdgeAI #ComputerVision"
+                )
+            elif "platform: x" in prompt_lower:
+                return (
+                    "Turning bounding boxes into low-latency spatial audio is the real edge AI challenge.\n\n"
+                    "Project Lighthouse pairs AWS-trained YOLOv8 with on-device ONNX quantization, monocular depth estimation, and Flutter TTS for accessibility.\n\n"
+                    "https://github.com/The-ml-guy/Project_Lighthouse"
+                )
+
+        elif "100projects" in prompt_lower or "algorithms" in prompt_lower:
+            if "platform: linkedin" in prompt_lower:
+                return (
+                    "High-level libraries make it easy to call .fit() and .predict() without ever understanding the underlying optimization mechanics.\n\n"
+                    "To stay sharp on foundational mathematics and algorithmic trade-offs, I have been building out '100projects'—a repository of 100+ modular, self-contained Python scripts covering core machine learning techniques from the ground up:\n\n"
+                    "1. Supervised foundations: Ordinary least squares, gradient descent variants, decision tree splits, and ensemble boosting.\n"
+                    "2. Unsupervised mechanics: Vector quantization in K-Means, density clustering with DBSCAN, and dimensionality reduction via PCA.\n"
+                    "3. Implementation focus: Minimal external dependencies, readable linear algebra, and reproducible code.\n\n"
+                    "Writing algorithms without relying on black-box wrappers forces you to confront vectorization bottlenecks, numerical stability edge cases, and matrix shape mismatches head-on.\n\n"
+                    "Explore the implementations:\n"
+                    "https://github.com/The-ml-guy/100projects\n\n"
+                    "#Python #MachineLearning #DataScience"
+                )
+            elif "platform: x" in prompt_lower:
+                return (
+                    "Calling .fit() and .predict() hides how ML algorithms actually work under the hood.\n\n"
+                    "I built '100projects'—100+ modular Python scripts implementing core ML techniques from scratch (gradient descent, trees, PCA, clustering) with zero bloat.\n\n"
+                    "https://github.com/The-ml-guy/100projects"
+                )
+
+        # Dynamic synthesis for any discovered topic or open-source repository
+        topic_match = ""
+        context_match = ""
+        for line in prompt.split("\n"):
+            line_s = line.strip()
+            if line_s.upper().startswith("TOPIC:"):
+                topic_match = line_s.split(":", 1)[1].strip()
+            elif line_s.upper().startswith("VERIFIED KNOWLEDGE") or line_s.upper().startswith("CONTEXT:"):
+                context_match = line_s.split(":", 1)[1].strip()
+
+        if topic_match:
+            clean_topic = topic_match.replace("GitHub Repo: ", "")
+            if "platform: linkedin" in prompt_lower:
+                summary = context_match[:160] if context_match else "Modular engineering design with clean separation of concerns."
+                return (
+                    f"Exploring modern open-source architectures: {clean_topic}.\n\n"
+                    f"Building reliable software in AI and distributed systems comes down to reducing runtime friction. "
+                    f"{clean_topic} provides a focused, high-leverage approach to this problem:\n\n"
+                    f"1. Core Architecture: {summary}\n"
+                    f"2. Performance Profile: Eliminates runtime bloat by keeping execution paths deterministic and testable.\n"
+                    f"3. Practical Adoption: Integrates cleanly into existing production pipelines without heavy overhead.\n\n"
+                    f"What architectural trade-offs do you prioritize when evaluating similar open-source tooling in production?\n\n"
+                    f"#OpenSource #MachineLearning #SoftwareEngineering"
+                )
+            elif "platform: x" in prompt_lower:
+                return (
+                    f"Deep-dive into {clean_topic}: solving core engineering bottlenecks with clean, modular architecture.\n\n"
+                    f"A great example of avoiding framework bloat by focusing on execution speed and determinism.\n\n"
+                    f"#OpenSource #AI"
+                )
+            elif "platform: instagram" in prompt_lower:
+                return (
+                    f"Engineering Spotlight: {clean_topic}\n\n"
+                    f"A closer look at how modern open-source projects approach high-efficiency systems architecture.\n\n"
+                    f"Key takeaways:\n"
+                    f"- Focused, clean execution without runtime bloat\n"
+                    f"- Testable design patterns for production environments\n"
+                    f"- High performance with minimal external dependencies\n\n"
+                    f"#SoftwareEngineering #TechInnovation #OpenSource"
+                )
+
         # Default Cron topic
         if "platform: linkedin" in prompt_lower:
             return (

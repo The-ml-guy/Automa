@@ -1,27 +1,50 @@
-# Automa — Autonomous, High-Quality Social Media Publishing System
+# Automa — AI Content Intelligence, Multi-Agent Research & Social Media Publishing Platform
 
-> **A reliable, low-cost, mostly autonomous social media content engine for your personal brand.**  
-> Automa generates original, substantive, platform-tailored engineering content and publishes to **LinkedIn**, **X (Twitter)**, and **Instagram** without requiring daily commands or manual post-by-post babysitting.
+> **A reliable, production-grade, multi-agent content intelligence and publishing platform for AI/ML engineers and technical builders.**  
+> Automa continuously discovers AI research, model weights, open-source repositories, and technical breakthroughs across **arXiv**, **Hugging Face**, **GitHub**, and **Hacker News**, verifies primary sources, objectively ranks topics, synthesizes research via the **7-Question Framework**, and publishes tailored, zero-slop engineering posts to **LinkedIn** and **X (Twitter)**.
+
+---
+
+## ⚡ Quick Start (The Simple Way)
+
+### Method A: 1-Click Windows Launcher (Easiest)
+Simply **double-click** [`start.bat`](file:///f:/automa/start.bat) in File Explorer, or in PowerShell run:
+```powershell
+.\start.bat
+```
+*(Press Enter to immediately launch the Web Dashboard and auto-open your browser at `http://localhost:8000`)*
+
+### Method B: PowerShell Script
+```powershell
+.\start.ps1
+```
 
 ---
 
 ## 🌟 Key Features
 
-1. **Zero AI Slop**: Enforces a strict, deterministic quality gate that rejects clichés ("delve", "game-changer", "supercharge", "unleash"), empty motivational quotes, fake personal revenue anecdotes, and exaggerated claims.
-2. **Deterministic Quality Gate & Scoring**: Evaluates every draft from 0 to 100 with mandatory checks (score $\ge 85$ required). Automatically triggers up to two targeted revisions before rejecting.
-3. **Autonomous Safety Policy (Phase 8)**: Automatically publishes routine, low-risk, brand-aligned posts while routing high-stakes topics (financial/investment advice, medical claims, legal disputes, political endorsements, confidential data) to `MANUAL_REVIEW_REQUIRED`.
-4. **Persistent Queue State Machine**: Full SQLite WAL storage tracking `IDEA` $\rightarrow$ `DRAFT` $\rightarrow$ `VALIDATING` $\rightarrow$ `APPROVED` $\rightarrow$ `SCHEDULED` $\rightarrow$ `PUBLISHED`, plus `REJECTED`, `FAILED`, `RETRY_PENDING`, and `MANUAL_REVIEW_REQUIRED`.
+1. **Multi-Agent Content Intelligence Architecture**:
+   - **Agent A (Research Discovery)**: Continuously polls arXiv API, Hugging Face Daily Papers, GitHub trending repos, and Hacker News Firebase API for fresh AI/ML breakthroughs.
+   - **Agent B (Source Verification)**: Inspects primary links, separates confirmed facts from caveats, identifies preprint vs peer-reviewed vs official release, and flags sensationalized clickbait.
+   - **Agent C (Topic Ranking & Trends)**: Scores topics 0–100 across 6 configurable dimensions (Recency 20%, Usefulness 20%, Significance 20%, Open-Source 15%, Credibility 15%, Novelty 10%) with exponential recency decay and anti-repetition deduplication.
+   - **Agent D (Research Simplification)**: Transforms complex papers into the rigorous 7-question distillation framework.
+   - **Agent E (Content Strategist)**: Brainstorms diverse candidate narrative angles and selects the optimal platform thesis.
+   - **Agent F (Platform Copywriter)**: Crafts distinct, tailored posts for LinkedIn, X (single posts or threads), and Instagram.
+2. **Zero AI Slop & Deterministic Quality Gate**: Enforces a strict 0–100 heuristic scoring gate (score $\ge 85$ required) that rejects clichés ("delve", "game-changer", "supercharge", "unleash"), empty motivational fluff, fake personal revenue anecdotes, and exaggerated benchmarks.
+3. **Autonomous Safety Policy**: Automatically publishes routine, low-risk, brand-aligned engineering content while routing high-stakes topics (financial/investment advice, medical claims, legal disputes, political endorsements, confidential data) to `MANUAL_REVIEW_REQUIRED`.
+4. **Persistent SQLite Queue State Machine**: Hardened WAL-mode SQLite tracking `IDEA` $\rightarrow$ `DRAFT` $\rightarrow$ `VALIDATING` $\rightarrow$ `APPROVED` $\rightarrow$ `SCHEDULED` $\rightarrow$ `PUBLISHED`, plus `REJECTED`, `FAILED`, `RETRY_PENDING`, and `MANUAL_REVIEW_REQUIRED`.
 5. **Deduplication & Originality**: Uses SHA-256 normalized content fingerprinting and word-level Jaccard similarity to prevent duplicate posts or recycled ideas disguised with minor rewording.
 6. **Pluggable Multi-Platform Publishing**:
-   - **Postiz REST API**: Direct integration with Postiz self-hosted or cloud (`POST /public/v1/posts`).
-   - **Direct APIs**: Extensible adapters for LinkedIn Community API, X (Twitter) API v2, and Instagram Graph API.
+   - **Direct APIs**: Production adapters for LinkedIn Community API, X (Twitter) API v2, and Instagram Graph API.
+   - **Postiz REST API**: Integration with Postiz self-hosted or cloud (`POST /public/v1/posts`).
    - **Dry-Run Simulator**: Safe local verification saving full payload proofs to `content/published/*.json`.
 7. **24/7 Standalone Background Daemon**: Built on **APScheduler** and persistent SQLite jobs with overdue recovery after system downtime. Runs completely independent of the Antigravity IDE. Includes ready-to-run Windows Task Scheduler automation.
-8. **Localhost Monitoring Dashboard**: Sleek, responsive, dark-mode glassmorphism interface running on `http://127.0.0.1:8080` for inspecting queues, triggering generation runs, and reviewing flagged posts.
+8. **Localhost Monitoring Dashboard**: Sleek, responsive, dark-mode glassmorphism interface running on `http://127.0.0.1:8080` for inspecting intelligence feeds, ranking score breakdowns, queues, and triggering one-click pipeline runs.
+9. **Automated Visual Graphic Generator (Pillow)**: Generates 100% free, local, publication-ready dark-mode graphics (1200×630 landscape for LinkedIn/X, 1080×1080 for Instagram) featuring distilled takeaways, category badges, primary source verification tags, and glowing neon accents. Automatically executes binary media uploads for LinkedIn UGC Posts and X (Twitter) API v2.
 
 ---
 
-## 📐 System Architecture
+## 📐 Multi-Agent Pipeline Architecture
 
 ```mermaid
 graph TD
@@ -142,16 +165,25 @@ Validate the entire deterministic gate, deduplication, retry, and safety policy:
 Automa includes an operator CLI:
 
 ```bash
-# Check queue counts, health, and recent posts
+# Check queue counts, health, intelligence stats, and recent posts
 python -m automa.cli status
 
-# Trigger an immediate content generation cycle
+# Run the complete 6-Agent Content Intelligence Pipeline (Discover -> Verify -> Rank -> Simplify -> Strategy -> Copywrite)
+python -m automa.cli pipeline
+
+# Poll arXiv, Hugging Face, GitHub, and Hacker News for fresh AI/ML intelligence
+python -m automa.cli discover --limit 5
+
+# Inspect top-ranked AI topics scored across 6 dimensions
+python -m automa.cli rank --limit 10
+
+# Trigger a standard generation cycle based on top intelligence / brand knowledge base
 python -m automa.cli generate
 
 # Check and publish due scheduled posts
 python -m automa.cli publish
 
-# Force-publish all scheduled posts immediately (useful during dry-run testing)
+# Force-publish all scheduled posts immediately (useful during testing)
 python -m automa.cli publish --force
 
 # Inspect posts requiring manual review under safety policy

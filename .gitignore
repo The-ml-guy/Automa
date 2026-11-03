@@ -21,8 +21,19 @@ secrets.json
 # Local logs & runs
 logs/*.log
 logs/*.jsonl
+data/*.log
+data/*.lock
+.tunnel_info.json
 
-# Published content artifacts & archives
-content/published/*.json
-content/published/*.png
-content/published/*.jpg
+# Binaries
+bin/
+
+# Generated content artifacts & queues
+content/published/*
+content/rejected/*
+content/queue/*
+content/media/*
+!content/published/.gitkeep
+!content/rejected/.gitkeep
+!content/queue/.gitkeep
+!content/media/.gitkeep

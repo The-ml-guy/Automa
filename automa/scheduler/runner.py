@@ -194,6 +194,53 @@ class SchedulerRunner:
         finally:
             self._release_concurrency_lock()
 
+    def publish_post_by_id(self, post_id: str) -> Dict[str, Any]:
+        """
+        Publishes a specific post immediately by ID without waiting for scheduled window.
+        """
+        post = self.repo.get_post_by_id(post_id)
+        if not post:
+            return {"success": False, "error": f"Post '{post_id}' not found."}
+
+        logger.info("Directly publishing post %s to %s", post.id, post.platform)
+        res = self.publisher.publish(post)
+
+        if res.success:
+            self.repo.update_post_status(
+                post_id=post.id,
+                status="PUBLISHED",
+                external_id=res.external_post_id,
+            )
+            self.repo.log_audit_event(
+                event_type="POST_PUBLISHED",
+                post_id=post.id,
+                details=f"Direct published to {post.platform}. External ID: {res.external_post_id}",
+            )
+            self.notifier.notify_routine_success(post.id, post.platform, res.external_post_id or "")
+            return {
+                "success": True,
+                "post_id": post.id,
+                "platform": post.platform,
+                "external_id": res.external_post_id,
+            }
+        else:
+            self.repo.update_post_status(
+                post_id=post.id,
+                status="FAILED",
+                last_error=res.error_message,
+            )
+            self.repo.log_audit_event(
+                event_type="POST_FAILED",
+                post_id=post.id,
+                details=f"Direct publishing failed: {res.error_message}",
+            )
+            return {
+                "success": False,
+                "post_id": post.id,
+                "platform": post.platform,
+                "error": res.error_message,
+            }
+
     def run_generation_cycle(self) -> Dict[str, Any]:
         """Wrapper for scheduled generation with concurrency lock."""
         if not self._acquire_concurrency_lock():

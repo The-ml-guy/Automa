@@ -25,28 +25,91 @@ def cmd_status(args: argparse.Namespace) -> None:
     settings = get_settings()
     counts = repo.get_queue_counts()
     recent = repo.get_recent_posts(limit=5)
+    intel_stats = repo.get_intelligence_stats()
 
-    print("\n" + "=" * 60)
-    print(" AUTOMA AUTONOMOUS PUBLISHING SYSTEM — STATUS REPORT")
-    print("=" * 60)
+    print("\n" + "=" * 65)
+    print(" AUTOMA AI CONTENT INTELLIGENCE & PUBLISHING SYSTEM")
+    print("=" * 65)
     print(f" Environment:       {settings.environment}")
     print(f" Operation Mode:    {'DRY-RUN (Safe Simulation)' if settings.dry_run else 'LIVE'}")
     print(f" Publisher Engine:  {settings.publisher_type.upper()}")
     print(f" Reasoning Model:   {settings.gemini_model}")
     print(f" Config Timezone:   {settings.timezone}")
-    print("-" * 60)
+    print("-" * 65)
+    print(" AI INTELLIGENCE HUB:")
+    print(f"   Total Discovered : {intel_stats.get('total_discovered', 0)}")
+    sources = intel_stats.get("source_breakdown", {})
+    if sources:
+        src_str = ", ".join(f"{k.upper()}: {v}" for k, v in sources.items())
+        print(f"   By Source Feed   : {src_str}")
+    print(f"   Verified Sources : {intel_stats.get('total_verified', 0)}")
+    print(f"   Ranked Topics    : {intel_stats.get('total_ranked', 0)}")
+    print(f"   7-Q Distillations: {intel_stats.get('total_distilled', 0)}")
+    print("-" * 65)
     print(" QUEUE BREAKDOWN:")
     for status in ["SCHEDULED", "PUBLISHED", "MANUAL_REVIEW_REQUIRED", "RETRY_PENDING", "REJECTED", "FAILED"]:
         cnt = counts.get(status, 0)
         print(f"   {status:<25}: {cnt}")
-    print("-" * 60)
+    print("-" * 65)
     print(" RECENT POSTS:")
     if recent:
         for p in recent:
             print(f"   [{p.platform.upper():<9}] [{p.status:<12}] Score: {p.quality_score}/100 | {p.topic}")
     else:
         print("   (No posts recorded yet in database)")
-    print("=" * 60 + "\n")
+    print("=" * 65 + "\n")
+
+
+def cmd_discover(args: argparse.Namespace) -> None:
+    from automa.agents.discovery import ResearchDiscoveryAgent
+    init_db()
+    print("[Automa] Running Agent A (Research Discovery Agent)...")
+    agent = ResearchDiscoveryAgent()
+    res = agent.execute({"limit_per_source": args.limit})
+    print(f"[Automa] Discovery Complete. New Items Discovered: {res.get('new_items_count', 0)}")
+    for src, cnt in res.get("source_breakdown", {}).items():
+        print(f"   - {src.upper()}: {cnt} new item(s)")
+
+
+def cmd_rank(args: argparse.Namespace) -> None:
+    from automa.agents.ranking import TopicRankingAgent
+    init_db()
+    repo = PostRepository()
+    if args.refresh:
+        print("[Automa] Running Agent C (Topic Ranking Agent) on all discovered items...")
+        agent = TopicRankingAgent(repo=repo)
+        agent.execute()
+
+    ranked = repo.get_top_ranked_topics(limit=args.limit)
+    print(f"\n[Automa] Top Ranked AI/ML Topics ({len(ranked)} items):\n" + "-" * 75)
+    for idx, r in enumerate(ranked, 1):
+        print(f"[{idx}] Score: {r['total_score']:.1f}/100 | [{r['source_type'].upper()}] {r['title']}")
+        print(f"    Scores: Recency={r['score_recency']} | Usefulness={r['score_usefulness']} | Significance={r['score_significance']} | Open-Source={r['score_accessibility']}")
+        print(f"    URL: {r['url']}\n")
+
+
+def cmd_pipeline(args: argparse.Namespace) -> None:
+    from automa.agents.orchestrator import ContentIntelligencePipeline
+    init_db()
+    print("\n" + "=" * 65)
+    print(" RUNNING END-TO-END MULTI-AGENT CONTENT INTELLIGENCE PIPELINE")
+    print("=" * 65)
+    orchestrator = ContentIntelligencePipeline()
+    res = orchestrator.run_full_pipeline(
+        discovery_limit_per_source=args.discovery_limit,
+        target_platforms=["linkedin", "x"],
+    )
+    if res.get("success"):
+        print(f"\n[Pipeline SUCCESS] Run ID: {res.get('pipeline_run_id')}")
+        print(f"  Topic Selected: {res.get('topic_chosen')}")
+        print(f"  Topic Score:    {res.get('topic_score')}/100")
+        print(f"  Primary Source: {res.get('source_url')}")
+        print(f"  Scheduled:      {res.get('posts_scheduled_count')} post(s)")
+        print(f"  Flagged Review: {res.get('posts_review_count')} post(s)\n")
+        for p in res.get("posts_created", []):
+            print(f"  - [{p.get('platform').upper()}] Status: {p.get('status')} | Score: {p.get('quality_score')}/100")
+    else:
+        print(f"\n[Pipeline FAILED]: {res.get('error')}\n")
 
 
 def cmd_generate(args: argparse.Namespace) -> None:
@@ -83,6 +146,11 @@ def cmd_daemon(args: argparse.Namespace) -> None:
     print("[Automa] Press Ctrl+C to stop.")
     runner = SchedulerRunner()
     runner.start_daemon(blocking=True)
+
+
+def cmd_autostart(args: argparse.Namespace) -> None:
+    from automa.autostart import main as run_autostart
+    run_autostart()
 
 
 def cmd_web(args: argparse.Namespace) -> None:
@@ -145,6 +213,22 @@ def main() -> None:
     p_status = subparsers.add_parser("status", help="Display system status and queue metrics")
     p_status.set_defaults(func=cmd_status)
 
+    # discover
+    p_disc = subparsers.add_parser("discover", help="Run Agent A to discover fresh AI/ML research and code")
+    p_disc.add_argument("--limit", type=int, default=5, help="Max items per source (default: 5)")
+    p_disc.set_defaults(func=cmd_discover)
+
+    # rank
+    p_rank = subparsers.add_parser("rank", help="Run Agent C to score and view top-ranked AI topics")
+    p_rank.add_argument("--limit", type=int, default=10, help="Max ranked topics to display (default: 10)")
+    p_rank.add_argument("--refresh", action="store_true", help="Recalculate rankings across all discovered items")
+    p_rank.set_defaults(func=cmd_rank)
+
+    # pipeline
+    p_pipe = subparsers.add_parser("pipeline", help="Run the complete autonomous multi-agent intelligence pipeline")
+    p_pipe.add_argument("--discovery-limit", type=int, default=5, help="Items to fetch per source (default: 5)")
+    p_pipe.set_defaults(func=cmd_pipeline)
+
     # generate
     p_gen = subparsers.add_parser("generate", help="Trigger an immediate content generation cycle")
     p_gen.set_defaults(func=cmd_generate)
@@ -157,6 +241,14 @@ def main() -> None:
     # daemon
     p_daemon = subparsers.add_parser("daemon", help="Run the persistent background scheduler")
     p_daemon.set_defaults(func=cmd_daemon)
+
+    # start (alias for daemon)
+    p_start = subparsers.add_parser("start", help="Start the 24/7 background scheduler")
+    p_start.set_defaults(func=cmd_daemon)
+
+    # autostart (runs pipeline once, then runs web dashboard + scheduler daemon)
+    p_auto = subparsers.add_parser("autostart", help="Auto-start: run pipeline once + web server + scheduler")
+    p_auto.set_defaults(func=cmd_autostart)
 
     # web
     p_web = subparsers.add_parser("web", help="Launch the local monitoring dashboard")

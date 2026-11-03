@@ -100,4 +100,103 @@ def init_db(db_path: Path = DB_PATH) -> None:
             );
         """)
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_audit_timestamp ON audit_logs(timestamp);")
+
+        # =====================================================================
+        # AI CONTENT INTELLIGENCE & MULTI-AGENT PIPELINE TABLES
+        # =====================================================================
+
+        # Agent A: Discovered Research & News Items
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS discovered_items (
+                id TEXT PRIMARY KEY,
+                title TEXT NOT NULL,
+                url TEXT UNIQUE NOT NULL,
+                source_type TEXT NOT NULL,
+                primary_category TEXT,
+                authors TEXT,
+                organization TEXT,
+                abstract TEXT,
+                raw_metadata_json TEXT,
+                published_at TEXT,
+                discovered_at TEXT NOT NULL,
+                status TEXT DEFAULT 'DISCOVERED'
+            );
+        """)
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_disc_source ON discovered_items(source_type);")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_disc_status ON discovered_items(status);")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_disc_published ON discovered_items(published_at);")
+
+        # Agent B: Source Verification Records
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS verified_sources (
+                id TEXT PRIMARY KEY,
+                discovered_item_id TEXT NOT NULL,
+                primary_url TEXT NOT NULL,
+                is_verified INTEGER DEFAULT 0,
+                pub_type TEXT NOT NULL,
+                confirmed_facts_json TEXT,
+                caveats_json TEXT,
+                evidence_snippets_json TEXT,
+                requires_human_review INTEGER DEFAULT 0,
+                review_reason TEXT,
+                verified_at TEXT NOT NULL,
+                FOREIGN KEY (discovered_item_id) REFERENCES discovered_items(id) ON DELETE CASCADE
+            );
+        """)
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_verified_item ON verified_sources(discovered_item_id);")
+
+        # Agent C: Topic Rankings & Trend Scoring
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS topic_rankings (
+                id TEXT PRIMARY KEY,
+                discovered_item_id TEXT NOT NULL,
+                total_score REAL NOT NULL,
+                score_recency REAL NOT NULL,
+                score_usefulness REAL NOT NULL,
+                score_significance REAL NOT NULL,
+                score_accessibility REAL NOT NULL,
+                score_credibility REAL NOT NULL,
+                score_novelty REAL NOT NULL,
+                signals_json TEXT,
+                notes TEXT,
+                ranked_at TEXT NOT NULL,
+                FOREIGN KEY (discovered_item_id) REFERENCES discovered_items(id) ON DELETE CASCADE
+            );
+        """)
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_rank_score ON topic_rankings(total_score DESC);")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_rank_item ON topic_rankings(discovered_item_id);")
+
+        # Agent D: Research Simplification (7-Question Framework)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS research_distillations (
+                id TEXT PRIMARY KEY,
+                discovered_item_id TEXT NOT NULL,
+                problem TEXT NOT NULL,
+                why_it_matters TEXT NOT NULL,
+                core_idea TEXT NOT NULL,
+                what_is_new TEXT NOT NULL,
+                results_and_conditions TEXT NOT NULL,
+                limitations TEXT NOT NULL,
+                code_and_paper_links_json TEXT,
+                distilled_at TEXT NOT NULL,
+                FOREIGN KEY (discovered_item_id) REFERENCES discovered_items(id) ON DELETE CASCADE
+            );
+        """)
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_distill_item ON research_distillations(discovered_item_id);")
+
+        # Agent E: Content Strategy Angles
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS content_angles (
+                id TEXT PRIMARY KEY,
+                discovered_item_id TEXT NOT NULL,
+                candidate_angles_json TEXT NOT NULL,
+                selected_angle TEXT NOT NULL,
+                target_platform TEXT NOT NULL,
+                strategy_reasoning TEXT NOT NULL,
+                created_at TEXT NOT NULL,
+                FOREIGN KEY (discovered_item_id) REFERENCES discovered_items(id) ON DELETE CASCADE
+            );
+        """)
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_angles_item ON content_angles(discovered_item_id);")
+
         conn.commit()

@@ -68,6 +68,26 @@ class GlobalConfig(BaseModel):
     min_passing_score: int = 85
 
 
+class BrandingConfig(BaseModel):
+    """Configurable branding for generated editorial cards."""
+    brand_name: str = "AUTOMA"
+    brand_subtitle: str = "AUTONOMOUS ENGINEERING"
+    brand_footer: str = "AUTOMA"
+    accent_primary: str = "#2563eb"
+    accent_secondary: str = "#06b6d4"
+
+
+def get_branding() -> BrandingConfig:
+    """Load branding configuration from environment variables."""
+    return BrandingConfig(
+        brand_name=os.getenv("BRAND_NAME", "AUTOMA"),
+        brand_subtitle=os.getenv("BRAND_SUBTITLE", "AUTONOMOUS ENGINEERING"),
+        brand_footer=os.getenv("BRAND_FOOTER", "AUTOMA"),
+        accent_primary=os.getenv("BRAND_ACCENT_PRIMARY", "#2563eb"),
+        accent_secondary=os.getenv("BRAND_ACCENT_SECONDARY", "#06b6d4"),
+    )
+
+
 class AppSettings(BaseModel):
     dry_run: bool = True
     environment: str = "development"
@@ -86,6 +106,7 @@ class AppSettings(BaseModel):
     notify_on_success: bool = False
     web_host: str = "127.0.0.1"
     web_port: int = 8080
+    allowed_origins: str = ""
 
 
 def get_settings() -> AppSettings:
@@ -106,8 +127,9 @@ def get_settings() -> AppSettings:
         notify_on_failure=os.getenv("NOTIFY_ON_FAILURE", "true").lower() in ("true", "1", "yes"),
         notify_on_review_needed=os.getenv("NOTIFY_ON_REVIEW_NEEDED", "true").lower() in ("true", "1", "yes"),
         notify_on_success=os.getenv("NOTIFY_ON_SUCCESS", "false").lower() in ("true", "1", "yes"),
-        web_host=os.getenv("WEB_HOST", "127.0.0.1"),
-        web_port=int(os.getenv("WEB_PORT", "8080")),
+        web_host=os.getenv("WEB_HOST", "0.0.0.0" if os.getenv("ENVIRONMENT") == "production" else "127.0.0.1"),
+        web_port=int(os.getenv("PORT", os.getenv("WEB_PORT", "8080"))),
+        allowed_origins=os.getenv("ALLOWED_ORIGINS", ""),
     )
 
 

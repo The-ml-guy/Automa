@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Automa — Share Center</title>
+  <meta name="description" content="One-click share center for Automa social media posts. Preview, generate images, and publish to X, LinkedIn, Instagram.">
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <!-- Open Graph -->
+  <meta property="og:title" content="Automa — Share Center">
+  <meta property="og:description" content="One-click social publishing wizard and editorial visual asset generator.">
+  <meta property="og:type" content="website">
+  <meta property="og:image" content="/favicon.svg">
+  <!-- Fonts & Stylesheet -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/share.css?v=2.0.0">
+</head>
+<body class="dark-theme">
+
+  <!-- Header -->
+  <header class="share-header">
+    <div class="header-inner">
+      <div class="brand-group">
+        <div class="brand-icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+          </svg>
+        </div>
+        <div>
+          <h1 class="brand-title">AUTOMA <span class="title-accent">SHARE CENTER</span></h1>
+          <span class="brand-sub">One-Click Social Publishing</span>
+        </div>
+      </div>
+      <div class="header-right">
+        <a href="/" class="nav-link">← Dashboard</a>
+        <button class="btn btn-secondary" id="btn-refresh" title="Refresh">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>
+          Refresh
+        </button>
+        <button class="btn btn-primary" id="btn-generate-new" title="Generate new posts with images">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
+          Generate New Posts
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Quick Stats -->
+  <section class="quick-stats" id="quick-stats">
+    <div class="stat-pill">
+      <span class="stat-number" id="stat-total">0</span>
+      <span class="stat-label">Total Posts</span>
+    </div>
+    <div class="stat-pill ready">
+      <span class="stat-number" id="stat-ready">0</span>
+      <span class="stat-label">Ready to Share</span>
+    </div>
+    <div class="stat-pill published">
+      <span class="stat-number" id="stat-published">0</span>
+      <span class="stat-label">Published</span>
+    </div>
+    <div class="stat-pill images">
+      <span class="stat-number" id="stat-with-images">0</span>
+      <span class="stat-label">With Images</span>
+    </div>
+  </section>
+
+  <!-- Filter Bar -->
+  <section class="filter-bar">
+    <div class="filter-tabs" id="platform-tabs">
+      <button class="filter-btn active" data-platform="all">All Platforms</button>
+      <button class="filter-btn" data-platform="x">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+        X (Twitter)
+      </button>
+      <button class="filter-btn" data-platform="linkedin">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M20.5 2h-17A1.5 1.5 0 002 3.5v17A1.5 1.5 0 003.5 22h17a1.5 1.5 0 001.5-1.5v-17A1.5 1.5 0 0020.5 2zM8 19H5v-9h3zM6.5 8.25A1.75 1.75 0 118.3 6.5a1.78 1.78 0 01-1.8 1.75zM19 19h-3v-4.74c0-1.42-.6-1.93-1.38-1.93A1.74 1.74 0 0013 14.19a.66.66 0 000 .14V19h-3v-9h2.9v1.3a3.11 3.11 0 012.7-1.4c1.55 0 3.36.86 3.36 3.66z"/></svg>
+        LinkedIn
+      </button>
+      <button class="filter-btn" data-platform="instagram">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect><path d="M16 11.37A4 4 0 1112.63 8 4 4 0 0116 11.37z"></path><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line></svg>
+        Instagram
+      </button>
+    </div>
+    <div class="filter-tabs" id="status-tabs">
+      <button class="status-btn active" data-status="all">All</button>
+      <button class="status-btn" data-status="SCHEDULED">Scheduled</button>
+      <button class="status-btn" data-status="PUBLISHED">Published</button>
+    </div>
+  </section>
+
+  <!-- Posts Grid -->
+  <main class="share-grid" id="share-grid">
+    <div class="loading-state">
+      <div class="spinner"></div>
+      <p>Loading your posts...</p>
+    </div>
+  </main>
+
+  <!-- Empty State -->
+  <div class="empty-hero hidden" id="empty-state">
+    <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.3">
+      <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
+    </svg>
+    <h2>No posts yet</h2>
+    <p>Click "Generate New Posts" to create content with auto-generated images ready for sharing.</p>
+  </div>
+
+  <!-- Share Assistant Modal for X & LinkedIn -->
+  <dialog class="share-modal" id="share-modal">
+    <div class="share-modal-box">
+      <div class="share-modal-header">
+        <div class="modal-title-with-icon">
+          <span class="modal-badge-x" id="modal-network-icon">𝕏</span>
+          <h3 id="modal-share-title">One-Click Share to X</h3>
+        </div>
+        <button class="btn-close-modal" id="btn-close-share-modal" aria-label="Close">&times;</button>
+      </div>
+      <div class="share-modal-body">
+        <div class="share-step-card step-done">
+          <span class="step-num">✓</span>
+          <div class="step-text">
+            <strong>Composer Opened</strong>
+            <p id="modal-step1-desc">X tweet compose opened in your browser with your text pre-filled.</p>
+          </div>
+        </div>
+        <div class="share-step-card step-active">
+          <span class="step-num">✨</span>
+          <div class="step-text">
+            <strong id="modal-step2-title">Image Copied to Clipboard & Downloaded</strong>
+            <p id="modal-step2-desc">Simply click on the tweet box and press <kbd>Ctrl</kbd> + <kbd>V</kbd> (or <kbd>⌘</kbd> + <kbd>V</kbd>) to paste the image!</p>
+          </div>
+        </div>
+        <div class="share-modal-image-preview">
+          <img id="share-modal-img" src="" alt="Post Visual Preview" />
+        </div>
+      </div>
+      <div class="share-modal-footer">
+        <button class="btn btn-secondary btn-sm" id="btn-modal-copy-img">📋 Copy Image</button>
+        <button class="btn btn-secondary btn-sm" id="btn-modal-dl-img">⬇️ Download Image</button>
+        <button class="btn btn-primary btn-sm" id="btn-modal-reopen">Open Composer Again</button>
+        <button class="btn btn-success btn-sm" id="btn-modal-done">Got It!</button>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- Toast Container -->
+  <div class="toast-container" id="toast-container" role="alert" aria-live="polite"></div>
+
+  <script src="/share.js?v=2.0.0"></script>
+</body>
+</html>
+
