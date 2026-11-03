@@ -72,7 +72,3 @@ services:
         value: "#2563eb"
       - key: BRAND_ACCENT_SECONDARY
         value: "#06b6d4"
-
-      # Public Media Serving (Optional: set to your https://automa-xxxx.onrender.com URL)
-      - key: PUBLIC_MEDIA_BASE_URL
-        sync: false

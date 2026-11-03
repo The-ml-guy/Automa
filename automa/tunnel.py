@@ -39,9 +39,10 @@ def get_tunnel_url() -> Optional[str]:
     """
     Returns the currently active public base URL.
     Checks environment variable PUBLIC_MEDIA_BASE_URL first,
+    then Render's auto-injected RENDER_EXTERNAL_URL,
     then active tunnel metadata file.
     """
-    env_url = os.getenv("PUBLIC_MEDIA_BASE_URL")
+    env_url = os.getenv("PUBLIC_MEDIA_BASE_URL") or os.getenv("RENDER_EXTERNAL_URL")
     if env_url:
         return env_url.strip().rstrip("/")
 
