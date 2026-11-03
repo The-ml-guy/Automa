@@ -69,7 +69,10 @@ class VisualCardGenerator:
                 # Quick check that Playwright browsers are installed
                 from playwright.sync_api import sync_playwright
                 with sync_playwright() as p:
-                    browser = p.chromium.launch(headless=True)
+                    browser = p.chromium.launch(
+                        headless=True,
+                        args=["--disable-dev-shm-usage", "--no-sandbox"],
+                    )
                     browser.close()
                 logger.info("Editorial HTML renderer initialized (Playwright + Chromium)")
             except Exception as e:

@@ -227,7 +227,10 @@ class EditorialCardRenderer:
         output_path = self.output_dir / f"{file_stem}.png"
 
         with sync_playwright() as p:
-            browser = p.chromium.launch(headless=True)
+            browser = p.chromium.launch(
+                headless=True,
+                args=["--disable-dev-shm-usage", "--no-sandbox"],
+            )
             page = browser.new_page(
                 viewport={"width": width, "height": height},
                 device_scale_factor=2,  # Retina quality

@@ -1,17 +1,14 @@
 services:
   - type: web
     name: automa
-    runtime: python
+    runtime: docker
     plan: free
     region: oregon
     branch: main
-    buildCommand: bash build.sh
-    startCommand: gunicorn automa.web.wsgi:application --bind 0.0.0.0:$PORT --workers 2 --threads 4 --timeout 120
+    dockerfilePath: ./Dockerfile
     healthCheckPath: /api/health
     envVars:
       # System & Runtime
-      - key: PYTHON_VERSION
-        value: "3.10.6"
       - key: ENVIRONMENT
         value: production
       - key: DRY_RUN
@@ -20,8 +17,6 @@ services:
         value: UTC
       - key: PUBLISHER_TYPE
         value: direct
-      - key: PLAYWRIGHT_BROWSERS_PATH
-        value: /opt/render/.cache/ms-playwright
 
       # AI Reasoning (Gemini)
       - key: GEMINI_API_KEY
