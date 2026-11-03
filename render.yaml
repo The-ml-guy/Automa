@@ -9,24 +9,33 @@ services:
     startCommand: gunicorn automa.web.wsgi:application --bind 0.0.0.0:$PORT --workers 2 --threads 4 --timeout 120
     healthCheckPath: /api/health
     envVars:
+      # System & Runtime
       - key: PYTHON_VERSION
         value: "3.10.6"
       - key: ENVIRONMENT
         value: production
       - key: DRY_RUN
         value: "false"
+      - key: TIMEZONE
+        value: UTC
       - key: PUBLISHER_TYPE
         value: direct
       - key: PLAYWRIGHT_BROWSERS_PATH
         value: /opt/render/.cache/ms-playwright
+
+      # AI Reasoning (Gemini)
       - key: GEMINI_API_KEY
         sync: false
       - key: GEMINI_MODEL
         value: gemini-2.5-flash
+
+      # LinkedIn Direct API Credentials
       - key: LINKEDIN_ACCESS_TOKEN
         sync: false
       - key: LINKEDIN_PERSON_URN
         sync: false
+
+      # X (Twitter) API v2 Credentials
       - key: X_API_KEY
         sync: false
       - key: X_API_SECRET
@@ -35,8 +44,35 @@ services:
         sync: false
       - key: X_ACCESS_SECRET
         sync: false
+
+      # Instagram Graph API Credentials
       - key: INSTAGRAM_ACCESS_TOKEN
         sync: false
       - key: INSTAGRAM_ACCOUNT_ID
         sync: false
 
+      # Alerting & Notifications (Optional)
+      - key: NOTIFICATION_WEBHOOK_URL
+        sync: false
+      - key: NOTIFY_ON_FAILURE
+        value: "true"
+      - key: NOTIFY_ON_REVIEW_NEEDED
+        value: "true"
+      - key: NOTIFY_ON_SUCCESS
+        value: "false"
+
+      # Visual Branding (Customizable)
+      - key: BRAND_NAME
+        value: AUTOMA
+      - key: BRAND_SUBTITLE
+        value: AUTONOMOUS ENGINEERING
+      - key: BRAND_FOOTER
+        value: AUTOMA
+      - key: BRAND_ACCENT_PRIMARY
+        value: "#2563eb"
+      - key: BRAND_ACCENT_SECONDARY
+        value: "#06b6d4"
+
+      # Public Media Serving (Optional: set to your https://automa-xxxx.onrender.com URL)
+      - key: PUBLIC_MEDIA_BASE_URL
+        sync: false
