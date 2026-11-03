@@ -15,9 +15,16 @@ from urllib.parse import urlparse, parse_qs
 from typing import Dict, Any
 
 from automa.config import get_settings, BASE_DIR, CONTENT_DIR
+from automa.db.schema import init_db
 from automa.db.repository import PostRepository
 from automa.engine.generator import ContentEngine
 from automa.scheduler.runner import SchedulerRunner
+
+# Ensure database tables exist
+try:
+    init_db()
+except Exception:
+    pass
 
 logger = logging.getLogger("automa.web.server")
 STATIC_DIR = Path(__file__).resolve().parent / "static"
@@ -195,44 +202,48 @@ class DashboardHandler(BaseHTTPRequestHandler):
             return
 
         # 5. REST APIs
-        if path == "/api/status":
-            settings = get_settings()
-            counts = self.repo.get_queue_counts()
-            audit = self.repo.get_recent_audit_logs(limit=10)
-            self._send_json({
-                "healthy": True,
-                "environment": settings.environment,
-                "dry_run": settings.dry_run,
-                "publisher_type": settings.publisher_type,
-                "gemini_model": settings.gemini_model,
-                "timezone": settings.timezone,
-                "queue_counts": counts,
-                "recent_audit": audit,
-            })
-        elif path == "/api/posts":
-            query_params = parse_qs(parsed_url.query)
-            platform = query_params.get("platform", [None])[0]
-            posts = self.repo.get_recent_posts(platform=platform, limit=100)
-            self._send_json([p.model_dump() for p in posts])
-        elif path == "/api/reviews":
-            posts = self.repo.get_posts_requiring_review()
-            self._send_json([p.model_dump() for p in posts])
-        elif path == "/api/audit":
-            audit = self.repo.get_recent_audit_logs(limit=50)
-            self._send_json(audit)
-        elif path == "/api/intelligence/stats":
-            stats = self.repo.get_intelligence_stats()
-            self._send_json(stats)
-        elif path == "/api/intelligence/discovered":
-            query_params = parse_qs(parsed_url.query)
-            source_type = query_params.get("source", [None])[0]
-            items = self.repo.get_discovered_items(source_type=source_type, limit=100)
-            self._send_json([item.model_dump() for item in items])
-        elif path == "/api/intelligence/rankings":
-            rankings = self.repo.get_top_ranked_topics(limit=50)
-            self._send_json(rankings)
-        else:
-            self.send_error(404, "Endpoint Not Found")
+        try:
+            if path == "/api/status":
+                settings = get_settings()
+                counts = self.repo.get_queue_counts()
+                audit = self.repo.get_recent_audit_logs(limit=10)
+                self._send_json({
+                    "healthy": True,
+                    "environment": settings.environment,
+                    "dry_run": settings.dry_run,
+                    "publisher_type": settings.publisher_type,
+                    "gemini_model": settings.gemini_model,
+                    "timezone": settings.timezone,
+                    "queue_counts": counts,
+                    "recent_audit": audit,
+                })
+            elif path == "/api/posts":
+                query_params = parse_qs(parsed_url.query)
+                platform = query_params.get("platform", [None])[0]
+                posts = self.repo.get_recent_posts(platform=platform, limit=100)
+                self._send_json([p.model_dump() for p in posts])
+            elif path == "/api/reviews":
+                posts = self.repo.get_posts_requiring_review()
+                self._send_json([p.model_dump() for p in posts])
+            elif path == "/api/audit":
+                audit = self.repo.get_recent_audit_logs(limit=50)
+                self._send_json(audit)
+            elif path == "/api/intelligence/stats":
+                stats = self.repo.get_intelligence_stats()
+                self._send_json(stats)
+            elif path == "/api/intelligence/discovered":
+                query_params = parse_qs(parsed_url.query)
+                source_type = query_params.get("source", [None])[0]
+                items = self.repo.get_discovered_items(source_type=source_type, limit=100)
+                self._send_json([item.model_dump() for item in items])
+            elif path == "/api/intelligence/rankings":
+                rankings = self.repo.get_top_ranked_topics(limit=50)
+                self._send_json(rankings)
+            else:
+                self.send_error(404, "Endpoint Not Found")
+        except Exception as e:
+            logger.exception("Error handling GET %s: %s", path, e)
+            self._send_json({"error": f"API error on {path}: {str(e)}"}, status=500)
 
     def do_POST(self) -> None:
         if self._is_unauthorized_external():
@@ -254,89 +265,93 @@ class DashboardHandler(BaseHTTPRequestHandler):
         except Exception:
             body = {}
 
-        if path == "/api/generate":
-            force = body.get("force", True) if isinstance(body, dict) else True
-            res = self.engine.run_scheduled_generation(force=force)
-            self._send_json(res)
-        elif path == "/api/publish":
-            force = body.get("force", True) if isinstance(body, dict) else True
-            res = self.runner.process_due_posts(force=force)
-            self._send_json(res)
-        elif path == "/api/posts/publish":
-            post_id = body.get("post_id") if isinstance(body, dict) else None
-            if not post_id:
-                self._send_json({"error": "Missing post_id"}, status=400)
-                return
-            res = self.runner.publish_post_by_id(post_id)
-            self._send_json(res)
-        elif path == "/api/intelligence/discover":
-            from automa.agents.discovery import ResearchDiscoveryAgent
-            agent = ResearchDiscoveryAgent(repo=self.repo)
-            limit = body.get("limit", 5)
-            res = agent.execute({"limit_per_source": limit})
-            self._send_json(res)
-        elif path == "/api/intelligence/pipeline":
-            from automa.agents.orchestrator import ContentIntelligencePipeline
-            orchestrator = ContentIntelligencePipeline(repo=self.repo)
-            res = orchestrator.run_full_pipeline(
-                discovery_limit_per_source=body.get("discovery_limit", 5),
-                target_platforms=body.get("platforms", ["linkedin", "x"]),
-            )
-            self._send_json(res)
-        elif path == "/api/review/decision":
-            post_id = body.get("post_id")
-            action = body.get("action")  # "approve" or "reject"
-            post = self.repo.get_post_by_id(post_id)
-            if not post:
-                self._send_json({"error": "Post not found"}, status=404)
-                return
-
-            if action == "approve":
-                post.status = "SCHEDULED"
-                post.requires_manual_review = False
-                post.scheduled_at = (post.scheduled_at or post.created_at)
-                self.repo.save_post(post)
-                self.repo.log_audit_event("MANUAL_APPROVAL", post.id, "Post approved by human reviewer.")
-                self._send_json({"success": True, "status": "SCHEDULED"})
-            else:
-                post.status = "REJECTED"
-                post.requires_manual_review = False
-                self.repo.save_post(post)
-                self.repo.log_audit_event("MANUAL_REJECTION", post.id, "Post rejected by human reviewer.")
-                self._send_json({"success": True, "status": "REJECTED"})
-        elif path == "/api/posts/generate-image":
-            post_id = body.get("post_id") if isinstance(body, dict) else None
-            if not post_id:
-                self._send_json({"error": "Missing post_id"}, status=400)
-                return
-            post = self.repo.get_post_by_id(post_id)
-            if not post:
-                self._send_json({"error": "Post not found"}, status=404)
-                return
-            try:
-                from automa.media.renderer import build_brief_from_research, EditorialCardRenderer
-                renderer = EditorialCardRenderer()
-                card_brief = build_brief_from_research(
-                    item_title=post.topic,
-                    item_abstract=post.content[:300] if post.content else "",
-                    raw_metadata=None,
-                    distillation_problem=None,
-                    distillation_core_idea=post.content[:200] if post.content else None,
-                    distillation_what_is_new=None,
-                    distillation_limitations=None,
-                    platform=post.platform,
-                    post_id=post.id,
+        try:
+            if path == "/api/generate":
+                force = body.get("force", True) if isinstance(body, dict) else True
+                res = self.engine.run_scheduled_generation(force=force)
+                self._send_json(res)
+            elif path == "/api/publish":
+                force = body.get("force", True) if isinstance(body, dict) else True
+                res = self.runner.process_due_posts(force=force)
+                self._send_json(res)
+            elif path == "/api/posts/publish":
+                post_id = body.get("post_id") if isinstance(body, dict) else None
+                if not post_id:
+                    self._send_json({"error": "Missing post_id"}, status=400)
+                    return
+                res = self.runner.publish_post_by_id(post_id)
+                self._send_json(res)
+            elif path == "/api/intelligence/discover":
+                from automa.agents.discovery import ResearchDiscoveryAgent
+                agent = ResearchDiscoveryAgent(repo=self.repo)
+                limit = body.get("limit", 5)
+                res = agent.execute({"limit_per_source": limit})
+                self._send_json(res)
+            elif path == "/api/intelligence/pipeline":
+                from automa.agents.orchestrator import ContentIntelligencePipeline
+                orchestrator = ContentIntelligencePipeline(repo=self.repo)
+                res = orchestrator.run_full_pipeline(
+                    discovery_limit_per_source=body.get("discovery_limit", 5),
+                    target_platforms=body.get("platforms", ["linkedin", "x"]),
                 )
-                card_path = renderer.render(card_brief)
-                post.media_urls = [str(card_path)]
-                post.media_prompt = f"Editorial Card [{card_brief.template}]: {post.topic}"
-                self.repo.save_post(post)
-                filename = Path(str(card_path)).name
-                self._send_json({"success": True, "image_url": f"/media/{filename}", "path": str(card_path)})
-            except Exception as e:
-                self._send_json({"error": f"Image generation failed: {str(e)}"}, status=500)
-        else:
-            self.send_error(404, "Endpoint Not Found")
+                self._send_json(res)
+            elif path == "/api/review/decision":
+                post_id = body.get("post_id")
+                action = body.get("action")  # "approve" or "reject"
+                post = self.repo.get_post_by_id(post_id)
+                if not post:
+                    self._send_json({"error": "Post not found"}, status=404)
+                    return
+
+                if action == "approve":
+                    post.status = "SCHEDULED"
+                    post.requires_manual_review = False
+                    post.scheduled_at = (post.scheduled_at or post.created_at)
+                    self.repo.save_post(post)
+                    self.repo.log_audit_event("MANUAL_APPROVAL", post.id, "Post approved by human reviewer.")
+                    self._send_json({"success": True, "status": "SCHEDULED"})
+                else:
+                    post.status = "REJECTED"
+                    post.requires_manual_review = False
+                    self.repo.save_post(post)
+                    self.repo.log_audit_event("MANUAL_REJECTION", post.id, "Post rejected by human reviewer.")
+                    self._send_json({"success": True, "status": "REJECTED"})
+            elif path == "/api/posts/generate-image":
+                post_id = body.get("post_id") if isinstance(body, dict) else None
+                if not post_id:
+                    self._send_json({"error": "Missing post_id"}, status=400)
+                    return
+                post = self.repo.get_post_by_id(post_id)
+                if not post:
+                    self._send_json({"error": "Post not found"}, status=404)
+                    return
+                try:
+                    from automa.media.renderer import build_brief_from_research, EditorialCardRenderer
+                    renderer = EditorialCardRenderer()
+                    card_brief = build_brief_from_research(
+                        item_title=post.topic,
+                        item_abstract=post.content[:300] if post.content else "",
+                        raw_metadata=None,
+                        distillation_problem=None,
+                        distillation_core_idea=post.content[:200] if post.content else None,
+                        distillation_what_is_new=None,
+                        distillation_limitations=None,
+                        platform=post.platform,
+                        post_id=post.id,
+                    )
+                    card_path = renderer.render(card_brief)
+                    post.media_urls = [str(card_path)]
+                    post.media_prompt = f"Editorial Card [{card_brief.template}]: {post.topic}"
+                    self.repo.save_post(post)
+                    filename = Path(str(card_path)).name
+                    self._send_json({"success": True, "image_url": f"/media/{filename}", "path": str(card_path)})
+                except Exception as e:
+                    self._send_json({"error": f"Image generation failed: {str(e)}"}, status=500)
+            else:
+                self.send_error(404, "Endpoint Not Found")
+        except Exception as e:
+            logger.exception("Error handling POST %s: %s", path, e)
+            self._send_json({"error": f"Internal error handling {path}: {str(e)}"}, status=500)
 
 
 def run_dashboard_server(host: str | None = None, port: int | None = None) -> None:

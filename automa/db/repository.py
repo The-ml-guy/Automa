@@ -10,7 +10,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Dict, List, Optional, Any
 from pydantic import BaseModel, Field
-from automa.db.schema import get_connection, DB_PATH
+from automa.db.schema import get_connection, init_db, DB_PATH
 
 
 class PostRecord(BaseModel):
@@ -110,6 +110,7 @@ class ContentAngleRecord(BaseModel):
 class PostRepository:
     def __init__(self, db_path: Path = DB_PATH):
         self.db_path = db_path
+        init_db(self.db_path)
 
     def _row_to_record(self, row: sqlite3.Row) -> PostRecord:
         return PostRecord(

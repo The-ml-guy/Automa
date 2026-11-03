@@ -9,7 +9,14 @@ import logging
 import os
 import threading
 from urllib.parse import urlparse
+from automa.db.schema import init_db
 from automa.web.server import DashboardHandler
+
+# Ensure database tables exist on WSGI boot
+try:
+    init_db()
+except Exception as e:
+    pass
 
 logger = logging.getLogger("automa.web.wsgi")
 
