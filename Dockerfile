@@ -6,6 +6,11 @@ FROM mcr.microsoft.com/playwright/python:v1.49.0-noble
 
 WORKDIR /app
 
+# Install system dependencies for cairosvg (SVG→PNG card rendering)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libcairo2 libcairo2-dev libffi-dev \
+    && rm -rf /var/lib/apt/lists/*
+
 # Upgrade pip and install dependencies
 COPY requirements.txt .
 RUN pip install --no-cache-dir --upgrade pip && \

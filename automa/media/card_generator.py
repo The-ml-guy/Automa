@@ -4,7 +4,7 @@ automa.media.card_generator
 Unified Visual Card Generation Interface for Automa.
 
 Primary path: HTML/CSS editorial renderer (Playwright + Jinja2)
-Fallback path: PIL pixel-based renderer (for environments without Playwright)
+Fallback path: Self-contained SVG card (no external dependencies needed)
 
 This module provides the public API consumed by the copywriter agent,
 content engine, and web server.
@@ -12,6 +12,7 @@ content engine, and web server.
 
 from __future__ import annotations
 
+import hashlib
 import logging
 import re
 from pathlib import Path
@@ -49,20 +50,21 @@ class VisualBrief(BaseModel):
 class VisualCardGenerator:
     """
     Renders editorial-quality social media graphics.
-    
+
     Primary: HTML/CSS templates rendered via Playwright (publication-grade typography).
-    Fallback: PIL-based rendering (if Playwright is unavailable).
+    Fallback: Clean SVG-based card (self-contained, no external dependencies).
     """
 
     def __init__(self, output_dir: Optional[Path] = None):
         self.output_dir = output_dir or MEDIA_DIR
         self.output_dir.mkdir(parents=True, exist_ok=True)
         self._renderer = None
-        self._pil_available = True
+        self._renderer_checked = False
 
     def _get_renderer(self):
         """Lazily initializes the HTML renderer."""
-        if self._renderer is None:
+        if not self._renderer_checked:
+            self._renderer_checked = True
             try:
                 from automa.media.renderer import EditorialCardRenderer
                 self._renderer = EditorialCardRenderer(output_dir=self.output_dir)
@@ -76,7 +78,7 @@ class VisualCardGenerator:
                     browser.close()
                 logger.info("Editorial HTML renderer initialized (Playwright + Chromium)")
             except Exception as e:
-                logger.warning("HTML renderer unavailable, will use PIL fallback: %s", e)
+                logger.warning("HTML renderer unavailable, will use SVG fallback: %s", e)
                 self._renderer = None
         return self._renderer
 
@@ -88,10 +90,10 @@ class VisualCardGenerator:
             try:
                 return self._render_html(brief, renderer)
             except Exception as e:
-                logger.warning("HTML rendering failed, falling back to PIL: %s", e)
+                logger.warning("HTML rendering failed, falling back to SVG: %s", e)
 
-        # PIL fallback
-        return self._render_pil_fallback(brief)
+        # SVG fallback — clean, modern, self-contained
+        return self._render_svg_card(brief)
 
     def generate_card(
         self,
@@ -136,7 +138,6 @@ class VisualCardGenerator:
         """Selects template based on content analysis, not keyword matching."""
         t_lower = topic.lower()
         points = takeaways or []
-        points_text = " ".join(points).lower()
 
         # Check for real benchmark data in the takeaways
         has_benchmarks = any(
@@ -245,114 +246,243 @@ class VisualCardGenerator:
         return "MEASURED PERFORMANCE"
 
     # -----------------------------------------------------------------------
-    # PIL fallback (simplified version for when Playwright is not available)
+    # SVG Fallback — Clean, Modern, Self-Contained (No PIL, No Playwright)
     # -----------------------------------------------------------------------
-    def _render_pil_fallback(self, brief: VisualBrief) -> Path:
-        """Renders a basic card using PIL when Playwright is unavailable."""
-        import os
-        from PIL import Image, ImageDraw, ImageFont
+    def _render_svg_card(self, brief: VisualBrief) -> Path:
+        """
+        Renders a clean, modern SVG card and converts to PNG.
+        Uses cairosvg if available, otherwise saves as SVG.
+        
+        Design: Dark glassmorphism theme with gradient accents,
+        clean typography, and structured layout.
+        """
+        from automa.config import get_branding
+        branding = get_branding()
 
-        is_square = brief.platform == "instagram"
-        width, height = (1080, 1080) if is_square else (1200, 675)
+        accent1 = branding.accent_primary or "#2563eb"
+        accent2 = branding.accent_secondary or "#06b6d4"
+        brand_name = branding.brand_name or "AUTOMA"
 
-        base = Image.new("RGBA", (width, height), (12, 15, 20, 255))
-        draw = ImageDraw.Draw(base)
+        is_portrait = brief.platform == "instagram"
+        is_landscape = brief.platform == "x"
 
-        # Subtle gradient
-        for y in range(height):
-            ratio = y / float(height)
-            v = int(12 + 5 * ratio)
-            draw.line([(0, y), (width, y)], fill=(v, v + 2, v + 6, 255))
+        if is_portrait:
+            w, h = 1080, 1350
+        elif is_landscape:
+            w, h = 1200, 675
+        else:
+            w, h = 1200, 1200
+
+        # Sanitize text for SVG (escape XML entities)
+        def esc(text: str) -> str:
+            return (text
+                    .replace("&", "&amp;")
+                    .replace("<", "&lt;")
+                    .replace(">", "&gt;")
+                    .replace('"', "&quot;")
+                    .replace("'", "&apos;"))
+
+        # Word-wrap helper
+        def wrap_text(text: str, max_chars: int) -> List[str]:
+            words = text.split()
+            lines, current = [], []
+            length = 0
+            for word in words:
+                if length + len(word) + 1 > max_chars and current:
+                    lines.append(" ".join(current))
+                    current = [word]
+                    length = len(word)
+                else:
+                    current.append(word)
+                    length += len(word) + 1
+            if current:
+                lines.append(" ".join(current))
+            return lines
+
+        headline = brief.headline[:55]
+        insight = brief.core_insight[:200]
+        category = brief.category.upper()
+        source = brief.source_name[:60]
+        points = [p[:80] for p in brief.supporting_points[:3]]
 
         margin = 72
+        content_w = w - 2 * margin
 
-        # Load fonts
-        def load_font(name, size):
-            paths = [
-                f"C:/Windows/Fonts/{name}",
-                "C:/Windows/Fonts/segoeui.ttf",
-                "C:/Windows/Fonts/arial.ttf",
-            ]
-            for p in paths:
-                if os.path.exists(p):
-                    try:
-                        return ImageFont.truetype(p, size)
-                    except Exception:
-                        pass
-            return ImageFont.load_default()
+        # Headline wrapping
+        headline_lines = wrap_text(headline, 32 if is_landscape else 28)[:3]
+        insight_lines = wrap_text(insight, 55 if is_landscape else 45)[:4]
 
-        # Category badge
-        f_badge = load_font("consolab.ttf", 11)
-        badge_text = f"  {brief.category.upper()}  "
-        bbox = draw.textbbox((0, 0), badge_text, font=f_badge)
-        bw = bbox[2] - bbox[0] + 12
-        bh = bbox[3] - bbox[1] + 10
-        draw.rounded_rectangle(
-            (margin, margin, margin + bw, margin + bh),
-            radius=4, fill=(20, 28, 40), outline=(74, 158, 255, 80),
-        )
-        draw.text((margin + 6, margin + 5), badge_text, font=f_badge, fill=(74, 158, 255))
+        # Build supporting points SVG
+        points_svg = ""
+        if points:
+            py = 0
+            for i, pt in enumerate(points):
+                pt_lines = wrap_text(pt, 50)
+                points_svg += f'''
+                <g transform="translate(0, {py})">
+                    <rect x="0" y="0" width="6" height="6" rx="3" fill="{accent2}" opacity="0.9"/>
+                    <text x="20" y="8" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="18" font-weight="500" fill="#cbd5e1">{esc(pt_lines[0])}</text>
+                </g>'''
+                py += 32
+                for extra_line in pt_lines[1:]:
+                    points_svg += f'''
+                <g transform="translate(0, {py})">
+                    <text x="20" y="8" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="18" font-weight="500" fill="#cbd5e1">{esc(extra_line)}</text>
+                </g>'''
+                    py += 28
 
-        # Headline
-        cur_y = margin + bh + 32
-        f_head = load_font("segoeuib.ttf", 42 if not is_square else 48)
-        # Word wrap
-        words = brief.headline.split()
-        lines, current = [], []
-        for w in words:
-            test = " ".join(current + [w])
-            tb = draw.textbbox((0, 0), test, font=f_head)
-            if tb[2] - tb[0] <= width - 2 * margin:
-                current.append(w)
-            else:
-                if current:
-                    lines.append(" ".join(current))
-                current = [w]
-        if current:
-            lines.append(" ".join(current))
+        # Headline Y position
+        headline_y = margin + 80
+        headline_font = 52 if not is_landscape else 44
+        headline_spacing = headline_font + 8
 
-        for line in lines[:3]:
-            draw.text((margin, cur_y), line, font=f_head, fill=(240, 242, 245))
-            cur_y += 52 if not is_square else 58
+        # Insight Y position
+        insight_y = headline_y + len(headline_lines) * headline_spacing + 20
+        insight_spacing = 30
 
-        # Accent stroke
-        cur_y += 16
-        draw.line([(margin, cur_y), (margin + 48, cur_y)], fill=(74, 158, 255), width=3)
-        cur_y += 28
+        # Points Y position
+        points_y = insight_y + len(insight_lines) * insight_spacing + 40
 
-        # Body text
-        f_body = load_font("segoeui.ttf", 19 if not is_square else 22)
-        body_lines, current = [], []
-        for w in brief.core_insight.split():
-            test = " ".join(current + [w])
-            tb = draw.textbbox((0, 0), test, font=f_body)
-            if tb[2] - tb[0] <= width - 2 * margin - 40:
-                current.append(w)
-            else:
-                if current:
-                    body_lines.append(" ".join(current))
-                current = [w]
-        if current:
-            body_lines.append(" ".join(current))
+        # Build the decorative elements
+        deco_circle_r = 280 if not is_landscape else 220
 
-        for line in body_lines[:4]:
-            draw.text((margin, cur_y), line, font=f_body, fill=(163, 173, 190))
-            cur_y += 30 if not is_square else 34
+        svg = f'''<svg xmlns="http://www.w3.org/2000/svg" width="{w}" height="{h}" viewBox="0 0 {w} {h}">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#080c16"/>
+      <stop offset="100%" stop-color="#0c1220"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="{accent1}"/>
+      <stop offset="100%" stop-color="{accent2}"/>
+    </linearGradient>
+    <linearGradient id="wave1" x1="0.2" y1="1" x2="0.8" y2="0" gradientUnits="objectBoundingBox">
+      <stop offset="0%" stop-color="{accent1}" stop-opacity="0.25"/>
+      <stop offset="100%" stop-color="{accent2}" stop-opacity="0.03"/>
+    </linearGradient>
+    <linearGradient id="wave2" x1="0.3" y1="1" x2="0.9" y2="0.2" gradientUnits="objectBoundingBox">
+      <stop offset="0%" stop-color="{accent1}" stop-opacity="0.35"/>
+      <stop offset="100%" stop-color="#1e40af" stop-opacity="0.05"/>
+    </linearGradient>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="60" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
 
-        # Footer
-        f_footer = load_font("consolab.ttf", 10)
-        footer_y = height - margin - 12
-        draw.line([(margin, footer_y - 16), (width - margin, footer_y - 16)], fill=(30, 36, 48, 128), width=1)
-        draw.text((margin, footer_y), brief.source_name, font=f_footer, fill=(107, 122, 144))
-        draw.text((width - margin - 60, footer_y), "AUTOMA", font=f_footer, fill=(107, 122, 144))
+  <!-- Background -->
+  <rect width="{w}" height="{h}" fill="url(#bg)"/>
 
-        # Save
-        file_stem = brief.post_id or f"card_{brief.platform}_{abs(hash(brief.headline)) % 1000000}"
-        out_path = self.output_dir / f"{file_stem}.png"
-        rgb = base.convert("RGB")
-        rgb.save(out_path, format="PNG", optimize=True)
-        logger.info("PIL fallback card saved: %s", out_path)
-        return out_path
+  <!-- Ambient glow circles -->
+  <circle cx="{w - 100}" cy="{h - 100}" r="{deco_circle_r}" fill="{accent1}" opacity="0.08" filter="url(#glow)"/>
+  <circle cx="{w - 200}" cy="{int(h * 0.35)}" r="{int(deco_circle_r * 0.7)}" fill="#7c3aed" opacity="0.06" filter="url(#glow)"/>
+
+  <!-- Organic wave shapes -->
+  <path d="M{int(w*0.3)},{h} C{int(w*0.5)},{int(h*0.8)} {int(w*0.45)},{int(h*0.55)} {int(w*0.7)},{int(h*0.35)} C{int(w*0.85)},{int(h*0.22)} {int(w*0.92)},{int(h*0.12)} {w},0 L{w},{h} Z" fill="url(#wave1)"/>
+  <path d="M{int(w*0.4)},{h} C{int(w*0.55)},{int(h*0.85)} {int(w*0.52)},{int(h*0.65)} {int(w*0.75)},{int(h*0.48)} C{int(w*0.88)},{int(h*0.38)} {int(w*0.94)},{int(h*0.28)} {w},{int(h*0.15)} L{w},{h} Z" fill="url(#wave2)"/>
+
+  <!-- Brand header -->
+  <g transform="translate({margin}, {margin})">
+    <!-- Brand icon (hexagonal shape) -->
+    <g transform="translate(0, 0)">
+      <path d="M17 2L31 10V24L17 32L3 24V10L17 2Z" fill="{accent1}" fill-opacity="0.2"/>
+      <path d="M17 2L31 10L17 18L3 10L17 2Z" fill="{accent2}"/>
+      <path d="M3 10L17 18V32L3 24V10Z" fill="#0284c7"/>
+      <path d="M31 10L17 18V32L31 24V10Z" fill="#0369a1"/>
+    </g>
+    <!-- Brand name -->
+    <text x="44" y="14" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="19" font-weight="800" letter-spacing="1.8" fill="#ffffff">{esc(brand_name)}</text>
+    <text x="44" y="30" font-family="'Consolas', 'Courier New', monospace" font-size="9" font-weight="700" letter-spacing="1.5" fill="#64748b">{esc(branding.brand_subtitle or "AUTONOMOUS ENGINEERING")}</text>
+
+    <!-- Category pill -->
+    <g transform="translate({content_w - 200}, -5)">
+      <rect x="0" y="0" width="200" height="34" rx="17" fill="rgba(56,189,248,0.08)" stroke="{accent2}" stroke-opacity="0.25" stroke-width="1"/>
+      <text x="100" y="22" font-family="'Consolas', 'Courier New', monospace" font-size="11" font-weight="700" letter-spacing="1.5" fill="#38bdf8" text-anchor="middle">{esc(category[:24])}</text>
+    </g>
+  </g>
+
+  <!-- Headline -->
+  <g transform="translate({margin}, {headline_y})">
+    {"".join(f'<text x="0" y="{i * headline_spacing}" font-family="system-ui, -apple-system, sans-serif" font-size="{headline_font}" font-weight="800" fill="#ffffff" letter-spacing="-0.5">{esc(line)}</text>' for i, line in enumerate(headline_lines))}
+  </g>
+
+  <!-- Accent line -->
+  <rect x="{margin}" y="{insight_y - 14}" width="48" height="3" rx="1.5" fill="url(#accent)"/>
+
+  <!-- Insight text -->
+  <g transform="translate({margin}, {insight_y})">
+    {"".join(f'<text x="0" y="{i * insight_spacing}" font-family="system-ui, -apple-system, sans-serif" font-size="20" font-weight="500" fill="#94a3b8">{esc(line)}</text>' for i, line in enumerate(insight_lines))}
+  </g>
+
+  <!-- Supporting points -->
+  {f'<g transform="translate({margin}, {points_y})">{points_svg}</g>' if points_svg else ''}
+
+  <!-- Footer -->
+  <g transform="translate({margin}, {h - margin - 10})">
+    <line x1="0" y1="-20" x2="{content_w}" y2="-20" stroke="#1e293b" stroke-width="1"/>
+    <!-- GitHub icon -->
+    <path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" fill="#64748b" transform="scale(0.85)"/>
+    <text x="28" y="8" font-family="'Consolas', 'Courier New', monospace" font-size="14" font-weight="600" fill="#64748b">{esc(source)}</text>
+    <text x="{content_w}" y="8" font-family="'Consolas', 'Courier New', monospace" font-size="11" font-weight="700" letter-spacing="1.5" fill="#475569" text-anchor="end">{esc(branding.brand_footer or brand_name)}</text>
+  </g>
+</svg>'''
+
+        # Save as SVG first
+        file_stem = brief.post_id or f"card_{brief.platform}_{hashlib.md5(brief.headline.encode()).hexdigest()[:8]}"
+        svg_path = self.output_dir / f"{file_stem}.svg"
+        png_path = self.output_dir / f"{file_stem}.png"
+
+        svg_path.write_text(svg, encoding="utf-8")
+
+        # Try to convert SVG → PNG via cairosvg
+        try:
+            import cairosvg
+            cairosvg.svg2png(
+                bytestring=svg.encode("utf-8"),
+                write_to=str(png_path),
+                output_width=w * 2,
+                output_height=h * 2,
+            )
+            logger.info("SVG card converted to PNG (2x retina): %s", png_path)
+            return png_path
+        except ImportError:
+            logger.info("cairosvg not installed, trying Playwright SVG→PNG conversion")
+        except Exception as e:
+            logger.warning("cairosvg conversion failed: %s, trying Playwright", e)
+
+        # Try Playwright as PNG converter (render the SVG in a browser)
+        try:
+            from playwright.sync_api import sync_playwright
+            html_wrapper = f'''<!DOCTYPE html>
+<html><head><meta charset="utf-8"><style>
+body {{ margin:0; padding:0; background: transparent; }}
+</style></head><body>{svg}</body></html>'''
+            
+            with sync_playwright() as p:
+                browser = p.chromium.launch(
+                    headless=True,
+                    args=["--disable-dev-shm-usage", "--no-sandbox"],
+                )
+                page = browser.new_page(
+                    viewport={"width": w, "height": h},
+                    device_scale_factor=2,
+                )
+                page.set_content(html_wrapper, wait_until="networkidle")
+                page.wait_for_timeout(200)
+                page.screenshot(
+                    path=str(png_path),
+                    type="png",
+                    clip={"x": 0, "y": 0, "width": w, "height": h},
+                )
+                browser.close()
+            logger.info("SVG card rendered to PNG via Playwright: %s", png_path)
+            return png_path
+        except Exception as e:
+            logger.warning("Playwright SVG→PNG conversion failed: %s", e)
+
+        # Last resort: return SVG file (still looks clean in web dashboards)
+        logger.info("Returning SVG card directly: %s", svg_path)
+        return svg_path
 
 
 def extract_key_takeaways(content: str, topic: str, context: str) -> List[str]:
