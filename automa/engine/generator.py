@@ -271,20 +271,21 @@ PREVIOUS DRAFT CRITIQUE (You MUST fix these issues):
         if not verdict:
             return None
 
-        # Re-render card with finalized content if possible
+        # Re-render editorial card with finalized content if possible
         if has_media and current_content:
             try:
-                from automa.media.card_generator import VisualCardGenerator, extract_key_takeaways
-                card_gen = VisualCardGenerator()
-                takeaways = extract_key_takeaways(current_content, topic, topic_context)
-                card_path = card_gen.generate_card(
-                    topic=topic,
-                    category="ENGINEERING INSIGHT",
-                    takeaways=takeaways,
+                from automa.media.renderer import build_brief_from_research, EditorialCardRenderer
+                renderer = EditorialCardRenderer()
+                refined_brief = build_brief_from_research(
+                    item_title=topic,
+                    item_abstract=current_content[:300],
+                    raw_metadata=raw_meta if 'raw_meta' in locals() else None,
                     platform=platform,
                     post_id=post_id,
                 )
+                card_path = renderer.render(refined_brief)
                 media_urls = [str(card_path)]
+                media_prompt = f"Editorial Card [{refined_brief.template}]: {topic}"
             except Exception as e:
                 logger.warning("Refining card with final content failed: %s", e)
 

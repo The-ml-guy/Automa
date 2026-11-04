@@ -23,3 +23,4 @@ EXPOSE 8080
 
 # Start Gunicorn WSGI server bound to Render's dynamic $PORT
 CMD ["sh", "-c", "gunicorn automa.web.wsgi:application --bind 0.0.0.0:${PORT:-8080} --workers 2 --threads 4 --timeout 120"]
+

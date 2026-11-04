@@ -258,13 +258,14 @@ class EditorialCardRenderer:
 def build_brief_from_research(
     item_title: str,
     item_abstract: str,
-    raw_metadata: Optional[Dict[str, Any]],
-    distillation_problem: Optional[str],
-    distillation_core_idea: Optional[str],
-    distillation_what_is_new: Optional[str],
-    distillation_limitations: Optional[str],
-    platform: str,
+    raw_metadata: Optional[Dict[str, Any]] = None,
+    distillation_problem: Optional[str] = None,
+    distillation_core_idea: Optional[str] = None,
+    distillation_what_is_new: Optional[str] = None,
+    distillation_limitations: Optional[str] = None,
+    platform: str = "linkedin",
     post_id: Optional[str] = None,
+    template_override: Optional[str] = None,
 ) -> CardBrief:
     """
     Synthesizes rich technical research into publication-grade visual templates.
@@ -318,7 +319,10 @@ def build_brief_from_research(
     has_benchmarks = len(benchmarks) > 0 or "benchmark" in item_title.lower() or "score" in item_title.lower()
     is_workflow = any(k in (item_title + " " + core_idea).lower() for k in ["orchestrat", "workflow", "agent", "pipeline", "crew", "flow", "multi-agent"])
 
-    if platform == "x":
+    valid_templates = ("spotlight", "insight", "scorecard", "minimal", "comparison")
+    if template_override and template_override.lower() in valid_templates:
+        template = template_override.lower()
+    elif platform == "x":
         template = "comparison"
     elif platform == "instagram":
         template = "minimal"

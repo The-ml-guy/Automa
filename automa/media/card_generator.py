@@ -162,17 +162,20 @@ class VisualCardGenerator:
             CardBrief, ComparisonBar, FeatureItem, MetaItem, FlowStep,
         )
 
-        # Map old art_direction names to new template names
+        # Map art_direction names to the 5 editorial templates: spotlight, insight, scorecard, minimal, comparison
         template_map = {
             "INSIGHT": "insight",
-            "SWISS_MINIMAL": "insight",
-            "BENCHMARK": "benchmark",
-            "BENCHMARK_METRIC": "benchmark",
+            "SWISS_MINIMAL": "minimal",
+            "MINIMAL": "minimal",
+            "BENCHMARK": "scorecard",
+            "BENCHMARK_METRIC": "scorecard",
+            "SCORECARD": "scorecard",
             "SPOTLIGHT": "spotlight",
             "PROJECT_SPOTLIGHT": "spotlight",
-            "EXPLAINER": "explainer",
-            "ARCHITECTURE_FLOW": "explainer",
-            "TECHNICAL_SPLIT": "explainer",
+            "EXPLAINER": "insight",
+            "ARCHITECTURE_FLOW": "spotlight",
+            "TECHNICAL_SPLIT": "comparison",
+            "COMPARISON": "comparison",
         }
         template = template_map.get(brief.art_direction.upper(), "insight")
 
@@ -189,7 +192,7 @@ class VisualCardGenerator:
         )
 
         # Populate template-specific fields
-        if template == "benchmark":
+        if template == "scorecard":
             card_brief.metric_value = brief.metric_highlight or self._extract_metric_value(brief.supporting_points)
             card_brief.metric_label = (brief.metric_label or self._extract_metric_label(brief.supporting_points))[:60]
 
@@ -206,15 +209,16 @@ class VisualCardGenerator:
                 for p in brief.supporting_points[:4]
             ]
 
-        elif template == "explainer":
-            steps = brief.supporting_points[:3]
-            card_brief.flow_steps = [
-                FlowStep(title="The Problem", desc=steps[0][:100] if len(steps) > 0 else "Identified bottleneck"),
-                FlowStep(title="The Solution", desc=steps[1][:100] if len(steps) > 1 else brief.core_insight[:100]),
-                FlowStep(title="The Outcome", desc=steps[2][:100] if len(steps) > 2 else "Measurable improvement"),
+        elif template == "comparison":
+            steps = brief.supporting_points[:2]
+            card_brief.comparisons = [
+                ComparisonBar(label=steps[0][:25] if len(steps) > 0 else "Baseline Approach", value_label="30%", percent=30, type="baseline"),
+                ComparisonBar(label=steps[1][:25] if len(steps) > 1 else "Modern System", value_label="90%", percent=90, type="optimized"),
             ]
-            if len(brief.supporting_points) > 3:
-                card_brief.callout = brief.supporting_points[3][:140]
+
+        elif template == "minimal":
+            card_brief.insight = brief.core_insight[:180]
+            card_brief.callout = brief.supporting_points[0][:100] if brief.supporting_points else None
 
         else:  # insight
             card_brief.evidence_items = [p[:100] for p in brief.supporting_points[:4]]

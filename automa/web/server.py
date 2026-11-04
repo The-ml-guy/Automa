@@ -318,6 +318,7 @@ class DashboardHandler(BaseHTTPRequestHandler):
                     self._send_json({"success": True, "status": "REJECTED"})
             elif path == "/api/posts/generate-image":
                 post_id = body.get("post_id") if isinstance(body, dict) else None
+                requested_template = body.get("template") if isinstance(body, dict) else None
                 if not post_id:
                     self._send_json({"error": "Missing post_id"}, status=400)
                     return
@@ -338,13 +339,19 @@ class DashboardHandler(BaseHTTPRequestHandler):
                         distillation_limitations=None,
                         platform=post.platform,
                         post_id=post.id,
+                        template_override=requested_template,
                     )
                     card_path = renderer.render(card_brief)
                     post.media_urls = [str(card_path)]
                     post.media_prompt = f"Editorial Card [{card_brief.template}]: {post.topic}"
                     self.repo.save_post(post)
                     filename = Path(str(card_path)).name
-                    self._send_json({"success": True, "image_url": f"/media/{filename}", "path": str(card_path)})
+                    self._send_json({
+                        "success": True,
+                        "image_url": f"/media/{filename}",
+                        "path": str(card_path),
+                        "template": card_brief.template,
+                    })
                 except Exception as e:
                     self._send_json({"error": f"Image generation failed: {str(e)}"}, status=500)
             else:

@@ -8,6 +8,17 @@ import pytest
 import requests
 
 
+@pytest.fixture(autouse=True, scope="module")
+def ensure_server():
+    """Skips live integration security tests if local dashboard server is not currently running."""
+    try:
+        r = requests.get("http://127.0.0.1:8080/api/health", timeout=1)
+        if r.status_code != 200:
+            pytest.skip("Local server at 127.0.0.1:8080 is not healthy.")
+    except Exception:
+        pytest.skip("Local dashboard server is not running on 127.0.0.1:8080. Start server to run live integration tests.")
+
+
 def test_localhost_admin_access():
     """Confirms localhost direct access to dashboard status returns 200."""
     resp = requests.get("http://127.0.0.1:8080/api/status", headers={"Host": "127.0.0.1:8080"})

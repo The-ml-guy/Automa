@@ -18,6 +18,24 @@ from automa.publishers.postiz import PostizPublisher
 logger = logging.getLogger("automa.publishers.direct")
 
 
+def _clean_env(val: Optional[str]) -> Optional[str]:
+    """Strips leading/trailing whitespace and quotes that may be introduced via UI pasting."""
+    if not val:
+        return None
+    val = val.strip().strip('"').strip("'").strip()
+    return val if val else None
+
+
+def _clean_token(val: Optional[str]) -> Optional[str]:
+    """Cleans a token string, stripping quotes, whitespace, and any accidental 'Bearer ' prefix."""
+    cleaned = _clean_env(val)
+    if not cleaned:
+        return None
+    if cleaned.lower().startswith("bearer "):
+        cleaned = cleaned[7:].strip()
+    return cleaned
+
+
 class DirectPublisher(BasePublisher):
     """
     Direct publisher for official social APIs (LinkedIn REST, X v2, Instagram Graph API).
@@ -31,8 +49,8 @@ class DirectPublisher(BasePublisher):
         logger.info("Direct publishing for platform: %s (Post ID: %s)", post.platform, post.id)
 
         if post.platform == "linkedin":
-            token = os.getenv("LINKEDIN_ACCESS_TOKEN")
-            person_urn = os.getenv("LINKEDIN_PERSON_URN")
+            token = _clean_token(os.getenv("LINKEDIN_ACCESS_TOKEN"))
+            person_urn = _clean_env(os.getenv("LINKEDIN_PERSON_URN"))
             if not token or not person_urn:
                 return PublishResult(
                     success=False,
@@ -118,10 +136,10 @@ class DirectPublisher(BasePublisher):
                 )
 
         elif post.platform == "x":
-            api_key = os.getenv("X_API_KEY")
-            api_secret = os.getenv("X_API_SECRET")
-            access_token = os.getenv("X_ACCESS_TOKEN")
-            access_secret = os.getenv("X_ACCESS_SECRET")
+            api_key = _clean_env(os.getenv("X_API_KEY"))
+            api_secret = _clean_env(os.getenv("X_API_SECRET"))
+            access_token = _clean_token(os.getenv("X_ACCESS_TOKEN"))
+            access_secret = _clean_env(os.getenv("X_ACCESS_SECRET"))
             if not all([api_key, api_secret, access_token, access_secret]):
                 return PublishResult(
                     success=False,
@@ -205,8 +223,8 @@ class DirectPublisher(BasePublisher):
                 )
 
         elif post.platform == "instagram":
-            ig_token = os.getenv("INSTAGRAM_ACCESS_TOKEN")
-            ig_account = os.getenv("INSTAGRAM_ACCOUNT_ID")
+            ig_token = _clean_token(os.getenv("INSTAGRAM_ACCESS_TOKEN"))
+            ig_account = _clean_env(os.getenv("INSTAGRAM_ACCOUNT_ID"))
             if not ig_token or not ig_account:
                 return PublishResult(
                     success=False,
