@@ -27,5 +27,7 @@ ENV PORT=8080
 EXPOSE 8080
 
 # Start Gunicorn WSGI server bound to Render's dynamic $PORT
-CMD ["sh", "-c", "gunicorn automa.web.wsgi:application --bind 0.0.0.0:${PORT:-8080} --workers 2 --threads 4 --timeout 120"]
+# Using 1 worker with multiple threads ensures only a single scheduler daemon instance runs,
+# preventing concurrency lock conflicts while maintaining high web throughput.
+CMD ["sh", "-c", "gunicorn automa.web.wsgi:application --bind 0.0.0.0:${PORT:-8080} --workers 1 --threads 4 --timeout 120"]
 

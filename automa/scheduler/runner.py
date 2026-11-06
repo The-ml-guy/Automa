@@ -47,9 +47,9 @@ class SchedulerRunner:
         """Simple cross-process lock using file creation."""
         try:
             if self.lock_file.exists():
-                # Check for stale lock (older than 10 minutes)
+                # Check for stale lock (older than 3 minutes)
                 mtime = self.lock_file.stat().st_mtime
-                if (time.time() - mtime) > 600:
+                if (time.time() - mtime) > 180:
                     logger.warning("Cleaning up stale lock file.")
                     self.lock_file.unlink(missing_ok=True)
                 else:
@@ -261,7 +261,10 @@ class SchedulerRunner:
         scheduler_cls = BlockingScheduler if blocking else BackgroundScheduler
         scheduler = scheduler_cls(timezone=self.global_cfg.timezone)
 
-        # 1. Recover any overdue jobs upon startup
+        # 1. Clear any orphaned lock file from prior server restarts or crashes
+        self._release_concurrency_lock()
+
+        # 2. Recover any overdue jobs upon startup
         recovered = self.recover_overdue_posts()
         if recovered > 0:
             logger.info("Recovered %d overdue posts on startup.", recovered)

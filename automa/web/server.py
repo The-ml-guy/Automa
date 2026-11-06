@@ -159,6 +159,12 @@ class DashboardHandler(BaseHTTPRequestHandler):
 
         # 1. Public Health Check for Render & uptime monitors
         if path in ("/api/health", "/health", "/healthz"):
+            # Trigger opportunistic publishing check when keepalive ping arrives
+            # This ensures queue processing even if background thread was delayed
+            try:
+                self.runner.process_due_posts(force=False)
+            except Exception as e:
+                logger.debug("Opportunistic background runner pass: %s", e)
             self._send_json({"status": "healthy", "service": "automa", "environment": get_settings().environment})
             return
 
